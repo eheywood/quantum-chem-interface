@@ -5,7 +5,7 @@ __arguments = None
 
 #Arguments in the form: 
 
-def __parse():
+def __parse() -> None:
 	global __arguments
 
 	parser = argparse.ArgumentParser()
@@ -16,9 +16,8 @@ def __parse():
 	
 	# Optional arguments
 
-	#parser.add_argument('-o', '--output', dest='OUTPUT_FILE', default='output.csv',
-	#					help='Path to save the data to. This will create an output directory in the directory given.'
-    #					 ' If this is omitted, the data will be outputted into output.csv in the current directory')
+	parser.add_argument('-v', '--verbose', action='store_true',
+						help='Will print out the qibits and circuit as well as results from the simulation')
 
 	__arguments = parser.parse_args()
 
