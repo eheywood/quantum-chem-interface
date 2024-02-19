@@ -5,30 +5,43 @@ import qsimcirq
 from Circuit import Circuit
 class QVM:
 
-    def __init__(self, *args: tuple) -> None:
-        """ Constructor for the Quantum Virtual Machine Class
+    processor_id = None
+    noisy = None
 
-        :param *args: Arguments for the constructor, contains details of how to setup the QVM. If empty, will result in default QVM implementation. TODO: expand on what makes up *args
-        :type *args: tuple
+    noise_property = None
+    noise_model = None
+    simulator = None
+    device = None
+    engine = None
+    
+    def __init__(self, processor = 'weber', noisy=False ) -> None:
+        """ Constructor for the Quantum Virtual Machine Class. 
+
+        :param processor: The type of google (cirq) processor being simulated, defaults to 'weber'
+        :type processor: str, optional
+        :param noisy: True if the QVM will simulate noise in the machine, False if there is no noise model being set, defaults to False
+        :type noisy: bool, optional
         """
-
-        # need to specify type, noise/no noise, num of quibits, processor type etc...
         
-        # Default case:
-        
-        self.implementation = str
-        self.implementation = 'cirq' # type: str
-        self.processor_id = 'weber'
-        self.noisy = False
-
-        self.noise_property = None
-        self.noise_model = None
-        self.simulator = None
-        self.device = None
-        self.engine = None
+        self.processor_id = processor
+        self.noisy = noisy
 
         self.construct_QVM()
     
+
+    def toggle_noise(self):
+        """ Toggles the noisy boolean. Turns the noise in the QVM on or off
+        """
+        self.noisy = not self.noisy
+
+    def set_custom_noise_model(self, noise_model: cirq.NoiseModel):
+        """ Sets the noise model used by the QVM as a custom one. See https://quantumai.google/cirq/noise/representing_noise#noisemodels for more information. 
+
+        :param noise_model: The noise model to be set. 
+        :type noise_model: cirq.NoiseModel
+        """
+        self.noise_model = noise_model
+
     def construct_QVM(self) -> None:
         """ Constructs what is required to run the QVM. Must be called every time a change is made to the settings of the QVM.
         """
@@ -55,16 +68,16 @@ class QVM:
         :rtype: cirq.Result
         """
 
-        # Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. 
+        # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. 
 
-        # Find qubits that will map to it correctly (intelligent with error checking or without)
+        # TODO: Find qubits that will map to it correctly (intelligent with error checking or without)
 
-        # Run on simulator
+        # TODO: Run on simulator
 
-        # Return results
+        # TODO: Return results
 
 
-    #def setup_with_config_file(): -> take yaml file and update QVM accordingly
+    # TODO: def setup_with_config_file(): -> take yaml file and update QVM accordingly
 
 
     def get_QVM_qubit_grid(self) -> str:
