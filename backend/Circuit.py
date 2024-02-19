@@ -1,4 +1,5 @@
 import cirq
+from cirq.contrib.qasm_import import circuit_from_qasm, QasmException
 import json
 from qiskit import QuantumCircuit
 
@@ -9,6 +10,7 @@ class Circuit:
     __cirq_circuit = None
     __cirq_qubit_map = None
     __qasm_circuit = None
+    __qasm_circuit_string = None
 
     def __init__(self, name: str, QVM_hardware: str) -> None:
         """ Constructs the Circuit class
@@ -18,11 +20,12 @@ class Circuit:
         :param QVM_hardware: The name of the hardware teh QVM is simulating. If no QVM use a default of 'weber'
         :type QVM_hardware: str
         """
-
         
         self.qvm_hardware = QVM_hardware
         self.name = name
     
+    ## SETTERS:
+        
     def set_QVM_hardware(self, hardware: str):
         """ Sets the name of the hardware the QVM is simulating
 
@@ -30,28 +33,48 @@ class Circuit:
         :type hardware: str
         """
         self.qvm_hardware = hardware
+    
+    ## PRIVATE UPDATE CIRCUIT METHODS:
+        
+    def __update_cirq_circuit(self):
+        """ Creates a Cirq circuit from the already existing qiskit circuit stored in the class
+        """
+        self.cirq_circuit = circuit_from_qasm(self.__qasm_circuit_string)
 
     def __update_qasm_circuit(self):
-        """ Creates a qasm circuit from the cirq circuit stored in the class
+        """ Creates a qasm circuit from the already existing cirq circuit stored in the class
         """
 
-        valid = True
-        if valid:
-            # TODO: add in checking validity as there is not 100% support between the two
+        # Not 100% support or finished from Cirq, use most basic quantum gates is possible, as the translating between these in Cirq and 
+        # qasm is the most
+        try:
             qasm_circuit = cirq.QasmOutput(self.cirq_circuit,self.cirq_qubit_map)
             qasm_filename = "../simulations/" + self.name + "_qasm.txt"
             qasm_circuit.save(qasm_filename)
 
             self.qasm_circuit = QuantumCircuit.from_qasm_file(qasm_filename)
-        #else:
-            #THROW SOME ERROR
+        except QasmException: # TODO: better error handling?
+            raise
 
 
     # TODO: def cirq_translate_circuit FOR 'device ready'
+    
+    # TODO: create qibit map
 
-    # TODO: def cirq_load_from_json(file_str):
 
-    def load_from_quirk_url(self, url: str):
+    ## LOADING CIRCUIT METHODS:
+            
+    def cirq_load_from_json(self, json_str: str):
+        """ Loads a quantum circuit from a serialized cirq quantum circuit
+
+        :param json_str: The string from the json file containing the circuit to be loaded
+        :type json_str: str
+        """
+
+        self.cirq_circuit = cirq.read_json(json_text=json_str)
+
+
+    def cirq_load_from_quirk_url(self, url: str):
         """ Loads a cirq circuit from a url that leads to a circuit in Quirk, a drag and drop online quantum circuit building tool
 
         :param url: The url leading to the desired Quirk circuit
@@ -60,6 +83,19 @@ class Circuit:
         self.cirq_circuit = cirq.quirk_url_to_circuit(url)
 
 
+    def qiskit_load_from_qasm(self, qasm_str: str):
+        """ Loads in the quantum circuit from a file containing an Open QASM circuit
+
+        :param qasm_str: The contents of the Open QASM circtuit
+        :type qasm_str: str
+        """
+
+        self.__qasm_circuit_string = qasm_str
+        self.__qasm_circuit = QuantumCircuit.from_qasm_str(qasm_str)
+
+
+    ## GETTERS:
+        
     def get_cirq_circuit(self):
         """ Returns the quantum circuit 
 
@@ -75,11 +111,23 @@ class Circuit:
         :rtype: qiskit.QuantumCircuit
         """
         
-        if self.qasm_circuit == None and self.cirq_circuit != None:
+        if self.__qasm_circuit == None and self.__cirq_circuit != None:
             self.__update_qasm_circuit()
         
-        # TODO: sort out error handling
         return self.qasm_circuit
+
+    def get_circuit_str(self) -> str:
+        """ Gets a displayable version of the circuit, ready to print
+
+        :return: The circuit ready to be printed
+        :rtype: str
+        """
+
+        if self.__cirq_circuit == None and self.__qasm_circuit_string != None:
+            # translate qasm to cirq
+            self.__update_cirq_circuit()
+        
+        return self.cirq_circuit.to_text_diagram()
 
 
 
