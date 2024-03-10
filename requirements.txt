@@ -1,3 +1,5 @@
 cirq
 cirq_google
 qsimcirq
+qiskit
+ply
