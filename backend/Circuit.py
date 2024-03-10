@@ -8,7 +8,7 @@ class Circuit:
     qvm_hardware = None
     name = None
     __cirq_circuit = None
-    __cirq_qubit_map = None
+    __cirq_qubit_list = [] # List[cirq.Qubit]
     __qasm_circuit = None
     __qasm_circuit_string = None
 
@@ -39,7 +39,7 @@ class Circuit:
     def __update_cirq_circuit(self):
         """ Creates a Cirq circuit from the already existing qiskit circuit stored in the class
         """
-        self.cirq_circuit = circuit_from_qasm(self.__qasm_circuit_string)
+        self.__cirq_circuit = circuit_from_qasm(self.__qasm_circuit_string)
 
     def __update_qasm_circuit(self):
         """ Creates a qasm circuit from the already existing cirq circuit stored in the class
@@ -48,7 +48,7 @@ class Circuit:
         # Not 100% support or finished from Cirq, use most basic quantum gates is possible, as the translating between these in Cirq and 
         # qasm is the most
         try:
-            qasm_circuit = cirq.QasmOutput(self.cirq_circuit,self.cirq_qubit_map)
+            qasm_circuit = cirq.QasmOutput(self.__cirq_circuit,self.__cirq_qubit_list)
             qasm_filename = "../simulations/" + self.name + "_qasm.txt"
             qasm_circuit.save(qasm_filename)
 
@@ -56,10 +56,15 @@ class Circuit:
         except QasmException: # TODO: better error handling?
             raise
 
+    def __update_qubit_list(self):
+        """ Updates the quibit list, is called if the circuit has been changed at any point.
+        """
+
+        self.__cirq_qubit_list = []
+        for i in range(self.__cirq_circuit.all_qubits):
+            self.__cirq_qubit_list.append(i)
 
     # TODO: def cirq_translate_circuit FOR 'device ready'
-    
-    # TODO: create qibit map
 
 
     ## LOADING CIRCUIT METHODS:
@@ -96,7 +101,7 @@ class Circuit:
 
     ## GETTERS:
         
-    def get_cirq_circuit(self):
+    def get_cirq_circuit(self) -> cirq.Circuit:
         """ Returns the quantum circuit 
 
         :return: The quantum circuit
@@ -126,6 +131,7 @@ class Circuit:
         if self.__cirq_circuit == None and self.__qasm_circuit_string != None:
             # translate qasm to cirq
             self.__update_cirq_circuit()
+            self.__update_qubit_list()
         
         return self.cirq_circuit.to_text_diagram()
 
