@@ -34,7 +34,7 @@ import cirq
 
 # TODO: def interpret_wavefunc():  Takes the wavefunction and returns the initial states of the qubits that is required.
 
-# TODO: def QFT and  inv QFT for the number of qubits... 
+# TODO: def QFT and inv QFT for the number of qubits... 
 
 
 
