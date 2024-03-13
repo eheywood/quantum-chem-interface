@@ -81,38 +81,57 @@ class QVM:
         #                }
         #    error_measures.append(measures)
         #    avg_errors.append(np.average(measures.values()))
-
-           
-
         
 
-        # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. 
-        translated_circuit = cirq.optimize_for_target_gateset(circuit.get_cirq_circuit(), context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
+        # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. GET ISWAP, or FSIM or SYCAMORE
+        transformed_circuit = cirq.optimize_for_target_gateset(circuit.get_cirq_circuit(), context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
         
+        err_nodes, err_edges, err_smallest = self.__get_error_graph()
 
-        # TODO: Find qubits that will map to it correctly (intelligent with error checking or without)
+        # TODO: Add in optimisation option using maze finding alg
+        device_path = self.__greedy_pathfinder(len(transformed_circuit.all_qubits()),err_smallest,err_nodes,err_edges)
 
-        gates = list(self.noise_property.two_qubit_gates())
-        error_measures = {}
-        for gate in gates:
-            measures = {
-            op_id.qubits: pauli_error
-            for op_id, pauli_error in self.noise_property.gate_pauli_errors.items()
-            if op_id.gate_type == gate
-        }
-            error_measures.update({gate.__name__:measures})
+        qubit_map = {}
+        count = 0
+        for q in transformed_circuit.all_qubits():
+            qubit_map.update({q:device_path[count]})
+            count +=1
 
-        sycamoreErrors = error_measures['SycamoreGate']
-        iSwapErrors = error_measures['ISwapPowGate']
+        device_ready_circuit = transformed_circuit.transform_qubits(lambda q: qubit_map[q])
 
+        results = self.engine.get_sampler(self.processor_id).run(device_ready_circuit, repetitions=repetitions)
+
+        return results
+
+    def __get_error_graph(self, targetGateset = 'ISwapPowGate'):
+        """ Produces the error graph for the current simulated hardware with a target gateset in mind, and returns the nodes, the edges and smallest node to start with.
+
+        :param targetGateset: The name of the target gateset that the error will be produced for, defaults to 'ISwapPowGate'
+        :type targetGateset: str, optional
+        :return: The nodes, edges and smallest nodes of the error graph.
+        :rtype: list, list, tuple
+        """
         qubits = set()
 
-        for transition in list(iSwapErrors.keys()):
-            q1, q2 = transition
-            qubits.add(q1)
-            qubits.add(q2)
+        if self.noisy:
+            gates = list(self.noise_property.two_qubit_gates())
+            error_measures = {}
+            for gate in gates:
+                measures = {
+                op_id.qubits: pauli_error
+                for op_id, pauli_error in self.noise_property.gate_pauli_errors.items()
+                if op_id.gate_type == gate
+            }
+                error_measures.update({gate.__name__:measures})
 
-        #print(sorted(list(qubits)))
+            errors = error_measures[targetGateset]
+
+
+            for transition in list(errors.keys()):
+                q1, q2 = transition
+                qubits.add(q1)
+                qubits.add(q2)
+
 
         nodes = sorted(list(qubits))
         edges = np.zeros((len(nodes),len(nodes)))
@@ -125,52 +144,40 @@ class QVM:
                     continue
                 else:
                     try:
-                        edges[i][j] = iSwapErrors[(nodes[i],nodes[j])]
+                        if self.noisy:
+                            edges[i][j] = errors[(nodes[i],nodes[j])]
 
-                        if edges[i][j] < smallestNode_val:
-                            smallestNode = (nodes[i],nodes[j])
+                            if edges[i][j] < smallestNode_val:
+                                smallestNode = (nodes[i],nodes[j])
+                        else:
+                            edges[i][j] = 0
+                            if edges[i][j] < smallestNode_val:
+                                smallestNode = (nodes[i],nodes[j])
                     except:
                         edges[i][j] = 100
+        return nodes, edges, smallestNode
 
-
-        pathLength = len(translated_circuit.all_qubits())
-        path = []
-        n1, n2 = smallestNode
+    def __greedy_pathfinder(self,pathLength,err_smallest,err_edges,err_nodes):
+        device_path = []
+        n1, n2 = err_smallest
         if n1 > n2:
-            path.append(n1)
-            path.append(n2)
+            device_path.append(n1)
+            device_path.append(n2)
         else:
-            path.append(n2)
-            path.append(n1)
+            device_path.append(n2)
+            device_path.append(n1)
 
-        while len(path) != pathLength:
-            curNode = path[-1]
-            searchEdges = edges[nodes.index(curNode)]
+        while len(device_path) != pathLength:
+            curNode = device_path[-1]
+            searchEdges = err_edges[err_nodes.index(curNode)]
             nextNodeIndexes = np.argpartition(searchEdges,4)[:4]
-            print(nextNodeIndexes)
             for i in range(len(nextNodeIndexes)):
-                if path.count(nodes[nextNodeIndexes[i]]) == 0:
-                    path.append(nodes[nextNodeIndexes[i]])
+                if device_path.count(err_nodes[nextNodeIndexes[i]]) == 0:
+                    device_path.append(err_nodes[nextNodeIndexes[i]])
                     break
                 if i == (len(nextNodeIndexes)-1):
                     raise ValueError
-
-        qubit_map = {}
-        count = 0
-        for q in translated_circuit.all_qubits():
-            qubit_map.update({q:path[count]})
-            count +=1
-            
-        print(qubit_map)
-
-
-        device_ready_circuit = translated_circuit.transform_qubits(lambda q: qubit_map[q])
-
-        results = self.engine.get_sampler(self.processor_id).run(device_ready_circuit, repetitions=repetitions)
-        print(results)
-
-        return results
-
+        return device_path
 
     # TODO: def setup_with_config_file(): -> take yaml file and update QVM accordingly
 
