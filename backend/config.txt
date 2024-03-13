@@ -1,1 +1,0 @@
-Some sort of config file for the QVM - need to define/plan what it will look like and how structured

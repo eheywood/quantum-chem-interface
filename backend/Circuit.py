@@ -107,7 +107,10 @@ class Circuit:
         :return: The quantum circuit
         :rtype: cirq.Circuit
         """
-        return self.cirq_circuit
+        if self.__qasm_circuit != None and self.__cirq_circuit == None:
+            self.__update_cirq_circuit()
+
+        return self.__cirq_circuit
 
     def get_qasm_circuit(self):
         """ Return the quantum circuit. If null and the cirq version is not, updates the object to translate the cirq circuit to qasm
