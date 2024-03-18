@@ -83,7 +83,8 @@ class QVM:
         #    avg_errors.append(np.average(measures.values()))
         
 
-        # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. GET ISWAP, or FSIM or SYCAMORE
+        # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. GET ISWAP, or FSIM or SYCAMORE 
+        ## https://quantumai.google/reference/python/cirq/CompilationTargetGateset
         transformed_circuit = cirq.optimize_for_target_gateset(circuit.get_cirq_circuit(), context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
         
         err_nodes, err_edges, err_smallest = self.__get_error_graph()
@@ -132,8 +133,13 @@ class QVM:
                 qubits.add(q1)
                 qubits.add(q2)
 
+        else:
+            print(self.device)
+            qubits = self.device.metadata.qubit_set
+            
 
         nodes = sorted(list(qubits))
+        print(nodes)
         edges = np.zeros((len(nodes),len(nodes)))
         smallestNode_val = 1000
         smallestNode = (None,None)
@@ -149,12 +155,24 @@ class QVM:
 
                             if edges[i][j] < smallestNode_val:
                                 smallestNode = (nodes[i],nodes[j])
+                                smallestNode_val = edges[i][j]
                         else:
-                            edges[i][j] = 0
-                            if edges[i][j] < smallestNode_val:
-                                smallestNode = (nodes[i],nodes[j])
+                            i_row = nodes[i].row
+                            i_col = nodes[i].col
+                            j_row = nodes[j].row
+                            j_col = nodes[j].col
+
+                            if ((i_row == j_row) and ((i_col == (j_col +1)) or (i_col == (j_col -1)) )) or ((i_col == j_col) and ((i_row == (j_row +1)) or (i_row == (j_row -1)))):
+                                edges[i][j] = 0
+                                if edges[i][j] < smallestNode_val:
+                                    smallestNode = (nodes[i],nodes[j])
+                                    smallestNode_val = edges[i][j]
+                            else:
+                                edges[i][j] = 100
                     except:
                         edges[i][j] = 100
+        print(smallestNode)
+        print(edges)
         return nodes, edges, smallestNode
 
     def __greedy_pathfinder(self,pathLength,err_smallest,err_edges,err_nodes):
@@ -177,6 +195,7 @@ class QVM:
                     break
                 if i == (len(nextNodeIndexes)-1):
                     raise ValueError
+        print(device_path)
         return device_path
 
     # TODO: def setup_with_config_file(): -> take yaml file and update QVM accordingly
