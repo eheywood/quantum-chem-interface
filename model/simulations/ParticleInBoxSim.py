@@ -15,30 +15,33 @@ import cirq_google
 import qsimcirq
 import numpy as np 
 
-# TODO: def build_circuit(L:float,N=8:int,wave:str):
-    #n_quibits = math,log2(N)
 
-    ## 1) interpret waveFunc
-    ## 2) quantise grid space L into N 
-    ## 3) n qubits = log2(N)
+def build_circuit(L:float,wave:str,N=8):
+    n_qubits = np.log2(N)
+
+    qubits = cirq.LineQubit.range(n_qubits)
+
+    # 1) interpret waveFunc
+    # 2) quantise grid space 2L into N. As assume box is from 0-L and > L is outside box. This is where we apply a 'penalty' on the potential energy, for being outside the box.
+    # 3) n qubits = log2(N)
     
-    ## for each time step:
-        ## for each position?
+    # for each time step:?
+        # for each position (eg |010> is position 2) need to make amplitude/value of it equivalent to the wavefunction 'value' at that point....
 
-    ## 4) Apply hadamarad to all qubits to put it into superposiiton
-    ## 5) QFT all quibits
-    ## 6) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
-    ## 7) Inverse QFT
-    ## 8) Apply phase shift depending on potential energy... R gate??
+    # 4) QFT all quibits
+    qft_moment = QFT(qubits)
+    # 5) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
+    # 6) Inverse QFT
+    inv_qft_moment = inv_QFT(qubits)
+    # 7) Apply phase shift depending on potential energy... R gate??
 
-    ## 9) apply hadamarad gates again? measure 'in the computational basis'
 
-    ## Should result in prob\bilities - for each position??
-
-    #return cirq.Circuit()
+    # Should result in probabilities - for each position
 
 
 # TODO: def interpret_wavefunc():  Takes the wavefunction and returns the initial states of the qubits that is required.
+
+# TODO: def phaseShift -> for momentum operator as well as 
 
 def QFT(qubits):
     moment = []
@@ -64,8 +67,6 @@ def inv_QFT(qubits):
         print('H')
         moment.append(cirq.Moment(cirq.H(qubits[q])))
     return moment
-
-# TODO: def phaseShift -> for momentum operator as well as 
 
 
 ## Custom gates to perform the unitary transform required for the QFT
