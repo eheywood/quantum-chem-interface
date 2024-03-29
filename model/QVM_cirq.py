@@ -58,6 +58,8 @@ class QVM:
         processor = cirq_google.engine.SimulatedLocalProcessor(processor_id=self.processor_id, sampler=self.simulator, device=self.device, calibrations={cal.timestamp // 1000: cal})
         self.engine = cirq_google.engine.SimulatedLocalEngine([processor])
 
+    # TODO: def setup_with_config_file(): -> take yaml file and update QVM accordingly
+        
     def run_circuit(self, circuit: Circuit, repetitions:int, optimisation: bool) -> cirq.Result:
         """ Runs a particular circuit on the QVM and returns the results.
 
@@ -69,42 +71,23 @@ class QVM:
         :rtype: cirq.Result
         """
 
-        #TODO: very average gate optimisation, find most used gate and optimise according to that. 
+        # Map circuit onto physical qubits using Router. This takes into account that two-qubit gates must operate on adjacent qubits.
+        device_graph = self.device.metadata.nx_graph
+        router = cirq.RouteCQC(device_graph)
 
-        #gates = self.noise_property.two_qubit_gates()
-        #error_measures = []
-        #avg_errors = []
-        #for gate in gates:
-        #    measures = {op_id.qubits: fsim_error 
-        #                for op_id, fsim_error in self.noise_property.fsim_errors.items() 
-        #                if op_id.gate_type == gate
-        #                }
-        #    error_measures.append(measures)
-        #    avg_errors.append(np.average(measures.values()))
-        
+        routed_circuit, _, _ = router.route_circuit(circuit.get_cirq_circuit())
 
         # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. GET ISWAP, or FSIM or SYCAMORE 
         ## https://quantumai.google/reference/python/cirq/CompilationTargetGateset
-        transformed_circuit = cirq.optimize_for_target_gateset(circuit.get_cirq_circuit(), context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
+
+        transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
         
-        err_nodes, err_edges, err_smallest = self.__get_error_graph()
-
-        # TODO: Add in optimisation option using maze finding alg
-        device_path = self.__greedy_pathfinder(len(transformed_circuit.all_qubits()),err_smallest,err_nodes,err_edges)
-
-        qubit_map = {}
-        count = 0
-        for q in transformed_circuit.all_qubits():
-            qubit_map.update({q:device_path[count]})
-            count +=1
-
-        device_ready_circuit = transformed_circuit.transform_qubits(lambda q: qubit_map[q])
-
-        results = self.engine.get_sampler(self.processor_id).run(device_ready_circuit, repetitions=repetitions)
+        # Further optimisations on the circuit could be performed here. 
+        results = self.engine.get_sampler(self.processor_id).run(transformed_circuit, repetitions=repetitions)
 
         return results
 
-    def __get_error_graph(self, targetGateset = 'ISwapPowGate'):
+    def get_two_gate_error_graph(self, targetGateset = 'ISwapPowGate'):
         """ Produces the error graph for the current simulated hardware with a target gateset in mind, and returns the nodes, the edges and smallest node to start with.
 
         :param targetGateset: The name of the target gateset that the error will be produced for, defaults to 'ISwapPowGate'
@@ -172,32 +155,6 @@ class QVM:
                     except:
                         edges[i][j] = 100
         return nodes, edges, smallestNode
-
-    def __greedy_pathfinder(self,pathLength,err_smallest,err_edges,err_nodes):
-        device_path = []
-        n1, n2 = err_smallest
-        if n1 > n2:
-            device_path.append(n1)
-            device_path.append(n2)
-        else:
-            device_path.append(n2)
-            device_path.append(n1)
-
-        while len(device_path) != pathLength:
-            curNode = device_path[-1]
-            searchEdges = err_edges[err_nodes.index(curNode)]
-            nextNodeIndexes = np.argpartition(searchEdges,4)[:4]
-            for i in range(len(nextNodeIndexes)):
-                if device_path.count(err_nodes[nextNodeIndexes[i]]) == 0:
-                    device_path.append(err_nodes[nextNodeIndexes[i]])
-                    break
-                if i == (len(nextNodeIndexes)-1):
-                    raise ValueError
-        print(device_path)
-        return device_path
-
-    # TODO: def setup_with_config_file(): -> take yaml file and update QVM accordingly
-
 
     def get_QVM_qubit_grid(self) -> str:
         """ Gets a string representation of the qubit grid for the current virtual machine.
