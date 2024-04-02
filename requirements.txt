@@ -3,3 +3,4 @@ cirq_google
 qsimcirq
 qiskit
 ply
+yaml
