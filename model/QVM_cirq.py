@@ -144,7 +144,7 @@ class QVM:
             self.__update_engine_setup()
 
 
-    def run_circuit(self, circuit: Circuit, optimisation: bool) -> cirq.Result:
+    def run_circuit(self, circuit: Circuit, optimise: bool) -> cirq.Result:
         """ Runs a particular circuit on the QVM and returns the results.
 
         :param circuit: The circuit wished to be run on the QVM
@@ -161,15 +161,65 @@ class QVM:
 
         routed_circuit, _, _ = router.route_circuit(circuit.get_cirq_circuit())
 
-        # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. GET ISWAP, or FSIM or SYCAMORE 
-        ## https://quantumai.google/reference/python/cirq/CompilationTargetGateset
 
-        transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
+        gate_set = None
+        if optimise:
+        # Get optimal target gateset based on average lowest error out of the possible gatesets for that device.
+            avg_errors = self.get_two_gate_avg_error()
+            
+            gateSetName = [key for key in avg_errors if avg_errors[key] == min(avg_errors.values())]
+            match gateSetName:
+                case 'SycamoreGate':
+                    gate_set = cirq_google.transformers.SycamoreTargetGateset()
+                case 'ISwapPowGate':
+                    gate_set = cirq.SqrtIswapTargetGateset()
+                case 'CZPowGate':
+                    gate_set = cirq.CZTargetGateSet()
+                case _:
+                    gate_set = None
+        
+        ## https://quantumai.google/reference/python/cirq/CompilationTargetGateset
+        if gate_set != None:
+            transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=gate_set)
+        else:
+            transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True))
         
         # Further optimisations on the circuit could be performed here. 
         results = self.engine.get_sampler(self.processor_id).run(transformed_circuit, repetitions=self.num_repetitions)
 
         return results
+
+    def get_two_gate_avg_error(self):
+        """ Gets the average error for two-quibt gates. 
+
+        :return: A dictionary with the gateset family and the average error across that gateset.
+        :rtype: dict
+        """
+        
+        gates = list(self.noise_property.two_qubit_gates())
+        error_measures = {}
+        for gate in gates:
+            measures = {
+            op_id.qubits: pauli_error
+            for op_id, pauli_error in self.noise_property.gate_pauli_errors.items()
+            if op_id.gate_type == gate
+        }
+            error_measures.update({gate.__name__:measures})
+
+        # Find average errors
+        avg_errors = {}
+        for gateType,qubit_errors in error_measures.items():
+            avg = 0
+            count = 0
+            if qubit_errors:
+                for _,error in qubit_errors.items():
+                    avg += error
+                    count += 1
+                avg = avg / count
+                avg_errors.update({gateType:avg})
+
+        return avg_errors
+    
 
     def get_two_gate_error_graph(self, targetGateset = 'ISwapPowGate'):
         """ Produces the error graph for the current simulated hardware with a target gateset in mind, and returns the nodes, the edges and smallest node to start with.
