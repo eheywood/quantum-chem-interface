@@ -16,28 +16,25 @@ class QVM:
     engine = None
     num_repetitions = 1000
     
-    def __init__(self, default=True, config=None) -> None:
+    def __init__(self, config=None) -> None:
         """ Constructor for the Quantum Virtual Machine Class. 
 
-        :param processor: The type of google (cirq) processor being simulated, defaults to 'weber'
-        :type processor: str, optional
-        :param noisy: True if the QVM will simulate noise in the machine, False if there is no noise model being set, defaults to False
-        :type noisy: bool, optional
+        :param config: A dictionary containing the configuration details of the QVM, defaults to None
+        :type config: dict, optional
         """
         
-        if default:
-            self.construct_default_QVM()
-
         if config != None:
             self.update_config(config)
+        else: 
+            self.construct_default_QVM()
     
 
     def toggle_noise(self):
         """ Toggles the noisy boolean. Turns the noise in the QVM on or off
         """
         self.noisy = not self.noisy
+        self.__noise_update()
 
-    #TODO: Come back and fix problem with this not updating all the config.
     def set_custom_noise_model(self, noise_model: cirq.NoiseModel):
         """ Sets the noise model used by the QVM as a custom one. See https://quantumai.google/cirq/noise/representing_noise#noisemodels for more information. 
 
@@ -45,6 +42,7 @@ class QVM:
         :type noise_model: cirq.NoiseModel
         """
         self.noise_model = noise_model
+        self.__noise_update()
 
     def set_custom_device(self, device: cirq.Device):
         """ If the user wishes to describe and build their own device, this method sets it for the QVM to use. See https://quantumai.google/cirq/hardware/devices for  more information on how to do this.
@@ -54,9 +52,18 @@ class QVM:
         """
 
         self.device = device
-        cal = cirq_google.engine.load_median_device_calibration(self.processor_id)
-        processor = cirq_google.engine.SimulatedLocalProcessor(processor_id=self.processor_id, sampler=self.simulator, device=self.device, calibrations={cal.timestamp // 1000: cal})
-        self.engine = cirq_google.engine.SimulatedLocalEngine([processor])
+        self.__update_engine_setup()
+
+    def __noise_update(self):
+        """ Used to update the simulator if noise is toggled or the noise model is updated.
+        """
+        
+        if self.noisy:
+            self.simulator = qsimcirq.QSimSimulator(noise=self.noise_model)
+        else:
+            self.simulator = qsimcirq.QSimSimulator()
+        
+        self.__update_engine_setup()
 
     def construct_default_QVM(self) -> None:
         """ Constructs what is required to run the QVM. A default set up.
@@ -69,15 +76,22 @@ class QVM:
             self.simulator = qsimcirq.QSimSimulator()
 
         self.device = cirq_google.engine.create_device_from_processor_id(self.processor_id)
+        self.__update_engine_setup()
+
+        self.num_repetitions = 1000
+    
+    def __update_engine_setup(self):
+        """ Updates the simulator engine. Called when device is changed.
+        """
+
         cal = cirq_google.engine.load_median_device_calibration(self.processor_id)
         processor = cirq_google.engine.SimulatedLocalProcessor(processor_id=self.processor_id, sampler=self.simulator, device=self.device, calibrations={cal.timestamp // 1000: cal})
         self.engine = cirq_google.engine.SimulatedLocalEngine([processor])
-        self.num_repetitions = 1000
-    
+
     def update_config(self,config:dict):
         """ Updates the configuration of the QVM from a dictionary that will have been produced from a yaml file.
 
-        :param config: _description_
+        :param config: A dictionary that has been imported from a yaml file. Contains all settings options for the QVM.
         :type config: dict
         """
 
@@ -98,23 +112,23 @@ class QVM:
                     if type(value) == int:
                         self.num_repetitions = value
                     else:
-                        raise TypeError('Repetitions must be an integer')
+                        raise TypeError('repetitions must be an integer')
                 case 'noise_model':
                     if value == 'default':
                         default_noise = True
                     elif value == 'custom':
                         default_noise = False
                     else:
-                        raise AttributeError(value + "is not a known key/value mapping within the configuration file.")
+                        raise AttributeError(value + " is not a known key/value mapping within the configuration file.")
                 case 'device':
                     if value == 'default':
                         default_device = True
                     elif value == 'custom':
                         default_device = False
                     else:
-                        raise AttributeError(value + "is not a known key/value mapping within the configuration file.")
+                        raise AttributeError(value + " is not a known key/value mapping within the configuration file.")
                 case _:
-                    raise AttributeError(setting + "is not a known key within the configuration file.")
+                    raise AttributeError(setting + " is not a known key within the configuration file.")
 
         if default_noise and self.noisy:
             self.noise_property = cirq_google.noise_properties_from_calibration(cirq_google.engine.load_median_device_calibration(self.processor_id))
@@ -127,9 +141,7 @@ class QVM:
         
         if default_device:
             self.device = cirq_google.engine.create_device_from_processor_id(self.processor_id)
-            cal = cirq_google.engine.load_median_device_calibration(self.processor_id)
-            processor = cirq_google.engine.SimulatedLocalProcessor(processor_id=self.processor_id, sampler=self.simulator, device=self.device, calibrations={cal.timestamp // 1000: cal})
-            self.engine = cirq_google.engine.SimulatedLocalEngine([processor])
+            self.__update_engine_setup()
 
 
     def run_circuit(self, circuit: Circuit, optimisation: bool) -> cirq.Result:
