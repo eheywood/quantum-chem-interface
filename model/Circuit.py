@@ -45,15 +45,14 @@ class Circuit:
         """ Creates a qasm circuit from the already existing cirq circuit stored in the class
         """
 
-        # Not 100% support or finished from Cirq, use most basic quantum gates is possible, as the translating between these in Cirq and 
-        # qasm is the most
+        # Not 100% support or finished from Cirq, use most basic quantum gates is possible, as the translating between these in Cirq and qasm is the most reliable
         try:
             qasm_circuit = cirq.QasmOutput(self.__cirq_circuit,self.__cirq_qubit_list)
             qasm_filename = "../simulations/" + self.name + "_qasm.txt"
             qasm_circuit.save(qasm_filename)
 
             self.qasm_circuit = QuantumCircuit.from_qasm_file(qasm_filename)
-        except QasmException: # TODO: better error handling?
+        except QasmException: 
             raise
 
     def __update_qubit_list(self):
@@ -63,8 +62,6 @@ class Circuit:
         self.__cirq_qubit_list = []
         for i in range(self.__cirq_circuit.all_qubits):
             self.__cirq_qubit_list.append(i)
-
-    # TODO: def cirq_translate_circuit FOR 'device ready'
 
 
     ## LOADING CIRCUIT METHODS:
