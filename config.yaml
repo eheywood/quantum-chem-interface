@@ -1,0 +1,12 @@
+---
+# Tells the system what backend to run on. Either 'cirq-qvm' or 'IBM-Q'
+backend: 'cirq-qvm'
+
+# Settings for the cirq qvm
+cirq-qvm:
+  processor_id: "weber" # weber or rainbow
+  noise_on: True
+  repetitions : 1000
+  noise_model: "default" # or custom. If custom will need to update the QVM with this prior to running a circuit
+  device: "default" # same as noise_model
+IBM-Q:
