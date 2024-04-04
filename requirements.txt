@@ -2,5 +2,7 @@ cirq
 cirq_google
 qsimcirq
 qiskit
+qiskit_aer
+qiskit-ibm-runtime
 ply
 pyyaml
