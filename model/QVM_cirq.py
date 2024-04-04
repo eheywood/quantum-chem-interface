@@ -4,7 +4,7 @@ import cirq_google
 import qsimcirq
 import numpy as np
 from .Circuit import Circuit
-class QVM:
+class QVM_cirq:
 
     processor_id = 'weber'
     noisy = True
