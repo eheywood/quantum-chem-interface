@@ -109,7 +109,7 @@ class Circuit:
 
         return self.__cirq_circuit
 
-    def get_qasm_circuit(self):
+    def get_qiskit_circuit(self):
         """ Return the quantum circuit. If null and the cirq version is not, updates the object to translate the cirq circuit to qasm
 
         :return: The quantum circuit
@@ -119,7 +119,7 @@ class Circuit:
         if self.__qasm_circuit == None and self.__cirq_circuit != None:
             self.__update_qasm_circuit()
         
-        return self.qasm_circuit
+        return self.__qasm_circuit
 
     def get_circuit_str(self) -> str:
         """ Gets a displayable version of the circuit, ready to print
@@ -133,7 +133,7 @@ class Circuit:
             self.__update_cirq_circuit()
             self.__update_qubit_list()
         
-        return self.cirq_circuit.to_text_diagram()
+        return self.__cirq_circuit.to_text_diagram()
 
 
 
