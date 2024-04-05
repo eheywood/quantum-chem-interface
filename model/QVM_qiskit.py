@@ -3,8 +3,6 @@ from qiskit_aer.noise import NoiseModel
 from qiskit import QuantumCircuit, transpile
 from qiskit.providers import fake_provider 
 from qiskit_aer import AerSimulator
-#from qiskit_ibm_runtime import QiskitRuntimeService
-import numpy as np
 
 class QVM_qiskit:
 
@@ -42,7 +40,7 @@ class QVM_qiskit:
         :type noise_model: cirq.NoiseModel
         """
         self.noise_model = noise_model
-        self.simulator = AerSimulator(backend_options={"noise_model": self.noise_model})
+        self.simulator = self.simulator.set_option("noise_model",self.noise_model)
 
     def set_custom_device(self, custom_fake_backend: fake_provider.GenericBackendV2):
         """ Allows the QVM  to run off a custom backend.
@@ -55,17 +53,15 @@ class QVM_qiskit:
 
 
 
-    def __noise_update(self):
-        """ Used to update the simulator if noise is toggled or the noise model is updated.
-        """
-        if self.noisy:
-            self.simulator = AerSimulator.from_backend(self.backend)
-
-
     def __backend_update(self):
         """ Updates the backend. Called if ever changes.
         """
-        self.simulator = AerSimulator().from_backend(self.backend)
+        if self.noisy:
+            self.simulator = AerSimulator().from_backend(self.backend)
+        else:
+            self.simulator = AerSimulator()
+        self.simulator.set_option('shots',self.num_repetitions)
+
 
 
     def construct_default_QVM(self) -> None:
@@ -90,7 +86,6 @@ class QVM_qiskit:
         :type config: dict
         """
 
-        default_noise = True
         default_backend = True
 
         for setting, value in config.items():
@@ -120,9 +115,8 @@ class QVM_qiskit:
                 case _:
                     raise AttributeError(setting + " is not a known key within the configuration file.")
         
-        if default_backend:
-            self.__backend_update()
-        else:
+        ## Sets the backend to the specified one according to the name
+        if  not default_backend:
             match value:
                 case 'fake_127q_pulse_v1':
                     self.backend = fake_provider.Fake127QPulseV1()
@@ -137,13 +131,8 @@ class QVM_qiskit:
                 case _:
                     raise AttributeError(value + " is an unknown fake backend. See https://docs.quantum.ibm.com/api/qiskit/providers_fake_provider for options")
 
-        if default_noise and self.noisy:
-            self.__noise_update()
-        elif default_noise:
-            self.simulator = AerSimulator()
+        self.__backend_update()
         
-        self.simulator.set_option('shots',self.num_repetitions)
-
             
         
 
