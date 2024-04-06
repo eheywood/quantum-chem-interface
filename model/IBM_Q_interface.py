@@ -14,7 +14,7 @@ class IBM_Q:
     backend = None
 
 
-    def __init__(self,token:str,config=None) -> bool:
+    def __init__(self,token:str,config=None):
         """ Initializes the IBM Q interface and returns true if a successful connection is made.
 
         :param token: The API token to connect to an IBMQ account.
@@ -34,12 +34,8 @@ class IBM_Q:
             else:
                 self.set_up_config()
 
-            success = True
         except:
-            success = False
-
-        return success
-
+            raise Exception("Could not successfully connect to Qiskit Runtime Service. Check API token.")
 
     def set_up_config(self,config:dict):
         """ Sets the configuration options specified from a configuration file.
