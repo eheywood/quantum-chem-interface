@@ -12,7 +12,6 @@
 
 import cirq
 import cirq_google
-import qsimcirq
 import numpy as np 
 
 
@@ -21,8 +20,8 @@ def build_circuit(L:float,wave:str,N=8):
 
     qubits = cirq.LineQubit.range(n_qubits)
 
-    # 1) interpret waveFunc
-    # 2) quantise grid space 2L into N. As assume box is from 0-L and > L is outside box. This is where we apply a 'penalty' on the potential energy, for being outside the box.
+    # 1) interpret waveFunc. Transform into an array representation of normalized probabilities.
+    # 2) quantize grid space 2L into N. As assume box is from 0-L and > L is outside box. This is where we apply a 'penalty' on the potential energy, for being outside the box.
     # 3) n qubits = log2(N)
     
     # for each time step:?
@@ -36,10 +35,11 @@ def build_circuit(L:float,wave:str,N=8):
     # 7) Apply phase shift depending on potential energy... R gate??
 
 
-    # Should result in probabilities - for each position
-
+    # Should result in a matrix of probabilities, all adding to 1 and representing different positions within the box.
 
 # TODO: def interpret_wavefunc():  Takes the wavefunction and returns the initial states of the qubits that is required.
+    
+# TODO: def initialise_states()
 
 # TODO: def phaseShift -> for momentum operator as well as 
 
@@ -75,7 +75,6 @@ class R_k(cirq.Gate):
         super(R_k, self)
         self.k = k
 
-
     def _num_qubits_(self):
         return 1
 
@@ -93,7 +92,6 @@ class R_k_inv(cirq.Gate):
     def __init__(self,k):
         super(R_k, self)
         self.k = k
-
 
     def _num_qubits_(self):
         return 1
