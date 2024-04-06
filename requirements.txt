@@ -6,5 +6,8 @@ qiskit_aer
 qiskit-ibm-runtime
 ply
 pyyaml
-pydantic>=2.5.0
 numpy
+window-curses ; platform_system == 'Windows'
+pydantic>=2.5.0
+
+## TODO: Sort out dependency problem with pydantic 2.5.0 for qiskit and smaller than 2.0.0 for cirq.
