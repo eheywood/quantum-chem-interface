@@ -1,6 +1,4 @@
 from qiskit import QuantumCircuit, transpile
-from qiskit.quantum_info import SparsePauliOp
-from qiskit.primitives import BackendSampler
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_aer import AerSimulator
@@ -13,22 +11,43 @@ class IBM_Q:
     num_repetitions = 1000
     service = None
     token = None
+    backend = None
 
 
-    def __init__(self,token,config=None) -> None:
+    def __init__(self,token:str,config=None) -> bool:
+        """ Initializes the IBM Q interface and returns true if a successful connection is made.
+
+        :param token: The API token to connect to an IBMQ account.
+        :type token: str
+        :param config: A specification of configuration for the interface , defaults to None
+        :type config: dict, optional
+        :return: True if successfully connect, False otherwise.
+        :rtype: bool
+        """
         
         try:
             self.service = QiskitRuntimeService(channel='ibm_quantum',token=token)
             self.token = token
-            print('Successfully connected to qiskit runtime service')
-            
-        except Exception:
-            raise Exception("Qiskit Runtime service failed. Check token is correct.")
-    
-    #def default_set_up(self):
+
+            if config == None:
+                self.backend = self.service.backend(self.backend_name)
+            else:
+                self.set_up_config()
+
+            success = True
+        except:
+            success = False
+
+        return success
 
 
-    def set_up_config(self,config):
+    def set_up_config(self,config:dict):
+        """ Sets the configuration options specified from a configuration file.
+
+        :param config: A dictionary of different configuration options. Will have been produced from a yaml file.
+        :type config: dict
+        :raises AttributeError: If the yaml file is not correctly formatted or named.
+        """
 
         for setting, value in config.items():
 
@@ -39,6 +58,11 @@ class IBM_Q:
                     self.optimisation_lvl = value
                 case _:
                     raise AttributeError(setting + " is not a known key within the configuration file.")
+        
+        ## See https://docs.quantum.ibm.com/api/qiskit-ibm-runtime/options for more potential configuration options.
+        
+        self.backend = self.service.backend(self.backend_name)
+
 
     def check_job_status(self,job_id):
         """ Checks the status of a job.
@@ -68,7 +92,7 @@ class IBM_Q:
         """
 
         try:
-            job = self.service(job_id)
+            job = self.service.job(job_id)
         except:
             raise Exception("Could not find job. Check job ID")
 
@@ -89,13 +113,25 @@ class IBM_Q:
 
 
     def submit_job(self, circuit:QuantumCircuit):
-        print('Submitting circuit...')
+        """ Submits a job to IBM Q according to pre-specified setup.
+
+        :param circuit: The circuit to submit
+        :type circuit: QuantumCircuit
+        :return: The job_id if successful.
+        :rtype: str
+        """
 
         ### Transpile circuit
-
-        ### Verify
+        pm = generate_preset_pass_manager(optimization_level=self.optimisation_lvl, backend=self.backend)
+        circ = pm.run(circuit)
 
         ### Run
+        sampler = Sampler(self.backend)
+        job = sampler.run([circ], shots = self.num_repetitions)
+        job_id = job.job_id()
+
+        return job_id
+
 
     def verify_via_sim(self, circuit:QuantumCircuit):
         """ Verifies the circuit works using a simulator. Returns the results from the simulation.
@@ -105,18 +141,13 @@ class IBM_Q:
         :return: A dictionary of the counts from the measurements
         :rtype: dict
         """
-        print('Verifying circuit...')
 
         try:
-            backend = self.service.backend(self.backend_name)
-            simulator = AerSimulator.from_backend(backend)
-
-            circuit.measure_all()
+            simulator = AerSimulator.from_backend(self.backend)
 
             circ = transpile(circuit,simulator)
 
             sampler = Sampler(simulator)
-
             job = sampler.run([circ],shots = self.num_repetitions)
             
             #TODO: improve this to remove 'meas' name requirement
