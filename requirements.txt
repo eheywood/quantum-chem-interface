@@ -6,3 +6,5 @@ qiskit_aer
 qiskit-ibm-runtime
 ply
 pyyaml
+pydantic>=2.5.0
+numpy
