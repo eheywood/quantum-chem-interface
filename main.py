@@ -30,10 +30,10 @@ def main():
     result = qm.verify_via_sim(test_circuit.get_qiskit_circuit())
     print(result)
 
-    job_id = qm.submit_job(test_circuit.get_qiskit_circuit())
-    print(job_id)
-    status = qm.check_job_status(job_id)
-    print(status)
+    #job_id = qm.submit_job(test_circuit.get_qiskit_circuit())
+    #print(job_id)
+    #status = qm.check_job_status(job_id)
+    #print(status)
     
 if __name__ == '__main__':
 	main()
