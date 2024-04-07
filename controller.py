@@ -10,6 +10,8 @@ class Controller:
 
     menu_options = ["Particle In a Box", "Load Configuration File", "Exit"]
 
+    backend_options = ["Cirq-QVM", "Qiskit-QVM", "IBM-Q"]
+
     def __init__(self) -> None:
 
         ## Initialise View and then go straight to menu
@@ -21,7 +23,7 @@ class Controller:
 
         match self.menu_options[option_index]:
             case "Particle In a Box":
-                print ("Particle In a Box")
+                self.particle_in_box()
             case "Load Configuration File":
                   self.get_config_file()
             case "Exit":
@@ -46,8 +48,23 @@ class Controller:
         
         self.menu()
 
-    #def particle_in_box(self):
-         ## Get user input from view.
+    def particle_in_box(self):
+        parameters = ['Wavefunction ', 'Particle mass', 'Time Step Size', 'Number of time steps']
+        params = self.view.problem_input_page(parameters, "Particle In a Box Simulation", self.backend_options)
+
+        if params == None:
+            self.menu()
+        
+        print(params)
+        ## Get user input from view.
+        ## Need:
+            # wavefunction - already as a probability distrib? or as a mathematical wave?
+
+            # mass of particle -< defualt to 0.5
+            # assume h_bar = 0 and mass to be 0.5? 
+            # time step value
+
+
 
          ## Format data to build circuit
 
