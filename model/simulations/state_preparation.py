@@ -26,6 +26,8 @@ def calc_angle(s,j,amps):
     #print("Denominator: ", denominator)
     return 2 * np.arcsin(numerator / denominator)
 
+#def reverse_quibit_order(qubits) -> cirq.Moment:
+
 def state_prep(amps,qubits) -> cirq.Moment:
     ## amps must be in order from 000, 001, ... 110, 111
     ## take in prop distrib- add up to 1
@@ -41,26 +43,42 @@ def state_prep(amps,qubits) -> cirq.Moment:
     print(amps)
 
     moment = []
-    for s in range(n):
-        j = 1
+    q = 0
+    for s in range(n,0,-1):
+        print("s: ", s , " q: ", qubits[q])
+        a = 1
         for j in range(int(2**(n-s)),0,-1):
             # no control qubit:
+            print("j: ", j)
             beta = calc_angle(s,j,amps)
-            if beta.isnan():
+            if np.isnan(beta):
                 beta = 0
-            if s == 1:
-                moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[s])))
+            if q == 0:
+                print("No controls")
+                moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[q])))
             else:
-                control_order = list(bin(2**(n-s) - j + 1))[2:]
-                moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[s]).controlled_by(qubits[1])))
-            j += 1
+                control_order = bin(2**(n-s) - a)[2:]
+                int_control_order = [int(x) for x in control_order ]
+
+                while len(int_control_order) != (2**(n-s-1)):
+                    int_control_order = [0] + int_control_order
+
+                print("Controls: ", int_control_order)
+                print("Controlled by: ", qubits[:q])
+                if len(int_control_order) == 1:
+                    moment.append(cirq.Moment(cirq.Ry(rads=beta).controlled(control_values=int_control_order).on(qubits[:q][0],qubits[q])))
+                else:
+                    moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[q]).controlled_by(*qubits[:q],control_values=int_control_order)))
+            a += 1
+        q += 1
 
     return moment
                 
 
 
 if __name__ == '__main__':
-    qubits = cirq.LineQubit.range(2)
-    a = [0,0.5,0.5,0]
+    qubits = cirq.LineQubit.range(3)
+    #a = [0,0.5,0.5,0]
+    a = [0.2,0,0.5,0,0,0,0.2,0.1]
     moment = state_prep(a,qubits)
     print(cirq.Circuit(moment).to_text_diagram())
