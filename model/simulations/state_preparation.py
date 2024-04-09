@@ -39,7 +39,27 @@ def calc_angle(s:int,j:int,amps:list) -> float:
     #print("Denominator: ", denominator)
     return 2 * np.arcsin(numerator / denominator)
 
-#def reverse_quibit_order(qubits) -> cirq.Moment:
+def reverse_qubit_order(qubits:list) -> cirq.Moment:
+    """ Reverses the bit ordering.
+
+    :param qubits: The qubits to apply this operation to.
+    :type qubits: list
+    :return: The moment of this operation
+    :rtype: cirq.Moment
+    """
+
+    moment = []
+
+    forward = 0
+    backwards = len(qubits)-1
+
+    while forward < backwards:
+        moment.append(cirq.Moment(cirq.SWAP(qubits[forward],qubits[backwards])))
+        forward += 1
+        backwards -= 1
+    
+    return moment
+
 
 def state_prep(amps:list,qubits:list) -> cirq.Moment:
     """_summary_
@@ -101,6 +121,9 @@ def state_prep(amps:list,qubits:list) -> cirq.Moment:
                 moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[q]).controlled_by(*qubits[:q],control_values=int_control_order)))
             a += 1
         q += 1
+
+    reverse_moment = reverse_qubit_order(qubits)
+    moment.append(reverse_moment)
 
     return moment
                 
