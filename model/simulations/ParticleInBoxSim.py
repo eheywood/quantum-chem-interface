@@ -13,7 +13,8 @@
 import cirq
 import cirq_google
 import numpy as np 
-
+from scipy.stats import norm
+import math
 
 def build_circuit(L:float,wave:str,N=8):
     n_qubits = np.log2(N)
@@ -21,6 +22,8 @@ def build_circuit(L:float,wave:str,N=8):
     qubits = cirq.LineQubit.range(n_qubits)
 
     # 1) interpret waveFunc. Transform into an array representation of normalized probabilities.
+    waveFunc = np.zeros((N))
+
     # 2) quantize grid space 2L into N. As assume box is from 0-L and > L is outside box. This is where we apply a 'penalty' on the potential energy, for being outside the box.
     # 3) n qubits = log2(N)
     
@@ -37,9 +40,59 @@ def build_circuit(L:float,wave:str,N=8):
 
     # Should result in a matrix of probabilities, all adding to 1 and representing different positions within the box.
 
-# TODO: def interpret_wavefunc():  Takes the wavefunction and returns the initial states of the qubits that is required.
+#def interpret_wavefunc(wave,N):  
+    #Takes the wavefunction and returns the initial states of the qubits that is required.
     
-# TODO: def initialise_states()
+    #waveFunc = np.zeros((N))
+
+    
+def gaussian_wavefunc(mean,spread,N):
+    """ Produces an array of values for a gaussian wavefunction
+
+    :param mean: mean of the gaussian distrib.
+    :type mean: float
+    :param spread: the standard deviation of the gaussian wavefunction
+    :type spread: float
+    :param N: the number of points
+    :type N: int
+    :return: An array of amplitudes that will average to roughly one.
+    :rtype: list
+    """
+    x = np.linspace(0,N-1, num=N)
+    wave_func =norm.pdf(x,mean,spread)
+
+    return wave_func
+
+def rectangular_wavefunc(peak_mid,peak_length,N):
+    """ Produces a rectangular wavefunction.
+
+    :param peak_mid: The mid of the rectangular peak
+    :type peak_mid: float
+    :param peak_length: The length of the peak
+    :type peak_length: int
+    :param N: The number of positions in the wavefunction
+    :type N: int
+    :return: An array of the amplitudes for the wavefunction
+    :rtype: list
+    """
+    peak_val = 1/peak_length
+    print(peak_val)
+    wave = np.zeros((N))
+
+    if peak_length % 2 == 0:
+        peak_mid == math.floor(peak_mid)
+    
+    print((peak_mid - (peak_length /2)))
+    print((peak_mid + (peak_length /2)))
+
+    for i in range(N):
+        print(i)
+        if i >= (peak_mid - (peak_length /2)) and i <= (peak_mid + (peak_length /2)):
+            wave[i] = peak_val
+    
+    return wave
+
+        
 
 # TODO: def phaseShift -> for momentum operator as well as 
 
@@ -105,6 +158,20 @@ class R_k_inv(cirq.Gate):
     def _circuit_diagram_info_(self, args):
         return "R_" + str(self.k) + "^+"
     
+if __name__ == '__main__':
+    qubits = cirq.LineQubit.range(3)
+    #a = [0,0.5,0.5,0]
+    #a = [0.2,0,0.5,0,0,0,0.2,0.1]
+    #moment = state_prep(a,qubits)
+    #print(cirq.Circuit(moment).to_text_diagram())
+
+    N = 8
+    mean = 3
+    width = 5
+
+    wave = rectangular_wavefunc(mean,width,N)
+    print(wave)
+    print(sum(wave))
 
 
 

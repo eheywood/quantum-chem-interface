@@ -79,7 +79,7 @@ def state_prep(amps:list,qubits:list) -> cirq.Moment:
     n = len(qubits)
 
     ## Ensure the probability distribution already addds to 1.
-    if np.sum(amps) != 1:
+    if round(np.sum(amps),4) != 1:
         raise Exception("Probability distribution must add to 1")
 
     ## Square root all vals so the |amps|^2 adds to 1 as required for a quantum  machine.
