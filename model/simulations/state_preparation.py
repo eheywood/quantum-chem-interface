@@ -90,12 +90,11 @@ def state_prep(amps:list,qubits:list) -> cirq.Moment:
 
     #Qubit index.
     q = 0
-
+    num_controls = 0
     for s in range(n,0,-1):
 
         ## For calculating the control values to put on qubits
         a = 1 
-
         for j in range(int(2**(n-s)),0,-1):
 
             #print("j: ", j)
@@ -113,17 +112,20 @@ def state_prep(amps:list,qubits:list) -> cirq.Moment:
 
                 ## Ensuring that the control order is the correct length so the control conditions are correct.
                 ## eg: 0 and 1 must become 00 and 01 if on qubit 3
-                while len(int_control_order) != (2**(n-s-1)):
+                print((2**(n-s-1)))
+                while len(int_control_order) != num_controls:
                     int_control_order = [0] + int_control_order
 
+                print(qubits[:q])
                 #print("Controls: ", int_control_order)
                 #print("Controlled by: ", qubits[:q])
                 moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[q]).controlled_by(*qubits[:q],control_values=int_control_order)))
             a += 1
         q += 1
+        num_controls += 1
 
     reverse_moment = reverse_qubit_order(qubits)
-    moment.append(reverse_moment)
+    #moment.append(reverse_moment)
 
     return moment
                 

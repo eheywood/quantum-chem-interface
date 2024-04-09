@@ -11,41 +11,74 @@
 ## Number of quibits is dependent on number of times the space is split up. n = log2(N)
 
 import cirq
+import cirq.circuits
 import cirq_google
 import numpy as np 
 from scipy.stats import norm
 import math
+from state_preparation import state_prep
 
-def build_circuit(L:float,wave:str,N=8):
-    n_qubits = np.log2(N)
+def build_circuit(L:int, energy_lvl, time_step, num_of_iters):
+    
+    moments = []
 
-    qubits = cirq.LineQubit.range(n_qubits)
-
-    # 1) interpret waveFunc. Transform into an array representation of normalized probabilities.
-    waveFunc = np.zeros((N))
+    # 1) generate waveFunc. Transform into an array representation of normalized probabilities.
+    wave_func = p_in_box_wavefunc(energy_lvl,L)
 
     # 2) quantize grid space 2L into N. As assume box is from 0-L and > L is outside box. This is where we apply a 'penalty' on the potential energy, for being outside the box.
-    # 3) n qubits = log2(N)
-    
-    # for each time step:?
-        # for each position (eg |010> is position 2) need to make amplitude/value of it equivalent to the wavefunction 'value' at that point....
+    N = int(2*L)
 
-    # 4) QFT all quibits
-    qft_moment = QFT(qubits)
-    # 5) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
-    # 6) Inverse QFT
-    inv_qft_moment = inv_QFT(qubits)
-    # 7) Apply phase shift depending on potential energy... R gate??
+    # 3) n qubits = log2(N). Plus 1 bc of the box
+    n_qubits = int(np.log2(N))
+    qubits = cirq.LineQubit.range(n_qubits)
+
+    box_amps = np.zeros((N))
+    box_amps[0:L] = wave_func
+    print(box_amps)
+    state_prepared_moment = state_prep(box_amps,qubits)
+
+    initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(qubits))
+    
+    moments.append(state_prepared_moment)
+    # for each time step:
+    for i in range(num_of_iters):
+
+        # 4) QFT all quibits
+        qft_moment = QFT(qubits)
+        #moments.append(qft_moment)
+        moments.append(cirq.qft(*qubits))
+
+        # 5) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
+    
+        # assume m = 0.5, h_bar = 0
+        momentum_shifts = []
+        for x in range(N):
+            shift = ((x**2) / 2 * 0.5) * time_step
+            momentum_shifts.append(shift)
+        momentum_moment = cirq.Moment(cirq.DiagonalGate(momentum_shifts).on(*qubits))
+        moments.append(momentum_moment)
+
+        # 6) Inverse QFT
+        inv_qft_moment = inv_QFT(qubits)
+        #moments.append(inv_qft_moment)
+        moments.append(cirq.qft(*qubits,inverse=True))
+
+        # 7) Apply phase shift depending on potential energy... R gate??
+        potential_energy_shifts = [1000,1000] #multiply by time step means nothing here.
+        potential_moment = cirq.Moment(cirq.DiagonalGate(potential_energy_shifts).on(qubits[-1]))
+        moments.append(potential_moment)
 
 
     # Should result in a matrix of probabilities, all adding to 1 and representing different positions within the box.
+    moments.append(cirq.measure(*qubits))
+    final_circuit = cirq.Circuit(moments)
 
-#def interpret_wavefunc(wave,N):  
-    #Takes the wavefunction and returns the initial states of the qubits that is required.
-    
-    #waveFunc = np.zeros((N))
+    print(final_circuit.to_text_diagram())
 
-    
+    #print(optimised_circuit.to_text_diagram())
+    return final_circuit, initial_state_circuit
+
+
 def gaussian_wavefunc(mean,spread,N):
     """ Produces an array of values for a gaussian wavefunction
 
@@ -92,9 +125,14 @@ def rectangular_wavefunc(peak_mid,peak_length,N):
     
     return wave
 
-        
+def p_in_box_wavefunc(energy_lvl,L):
 
-# TODO: def phaseShift -> for momentum operator as well as 
+    wave_func = np.zeros((L))
+    for x in range(L-1):
+        wave_func[x] = np.sqrt(2 / L) * np.sin((energy_lvl * np.pi * x)/L)
+
+    return wave_func / sum(wave_func)
+
 
 def QFT(qubits):
     moment = []
@@ -105,6 +143,8 @@ def QFT(qubits):
             rk = R_k(count)
             count +=1
             moment.append(cirq.Moment(cirq.ControlledGate(rk).on(qubits[i],qubits[q])))
+    
+    moment.append(reverse_qubit_order(qubits))
 
     return moment
 
@@ -119,8 +159,31 @@ def inv_QFT(qubits):
             moment.append(cirq.Moment(cirq.ControlledGate(rk).on(qubits[i],qubits[q])))
         print('H')
         moment.append(cirq.Moment(cirq.H(qubits[q])))
+
+    moment.append(reverse_qubit_order(qubits))
+
     return moment
 
+def reverse_qubit_order(qubits:list) -> cirq.Moment:
+    """ Reverses the bit ordering.
+
+    :param qubits: The qubits to apply this operation to.
+    :type qubits: list
+    :return: The moment of this operation
+    :rtype: cirq.Moment
+    """
+
+    moment = []
+
+    forward = 0
+    backwards = len(qubits)-1
+
+    while forward < backwards:
+        moment.append(cirq.Moment(cirq.SWAP(qubits[forward],qubits[backwards])))
+        forward += 1
+        backwards -= 1
+    
+    return moment
 
 ## Custom gates to perform the unitary transform required for the QFT
 class R_k(cirq.Gate):
@@ -143,7 +206,7 @@ class R_k(cirq.Gate):
 
 class R_k_inv(cirq.Gate):
     def __init__(self,k):
-        super(R_k, self)
+        super(R_k_inv, self)
         self.k = k
 
     def _num_qubits_(self):
@@ -159,19 +222,14 @@ class R_k_inv(cirq.Gate):
         return "R_" + str(self.k) + "^+"
     
 if __name__ == '__main__':
-    qubits = cirq.LineQubit.range(3)
-    #a = [0,0.5,0.5,0]
-    #a = [0.2,0,0.5,0,0,0,0.2,0.1]
-    #moment = state_prep(a,qubits)
-    #print(cirq.Circuit(moment).to_text_diagram())
+    time_step = 0.1
 
-    N = 8
-    mean = 3
-    width = 5
+    #circuit = build_circuit(4,1,0.1,1)
 
-    wave = rectangular_wavefunc(mean,width,N)
-    print(wave)
-    print(sum(wave))
-
+    qubits = cirq.LineQubit.range(5)
+    qft_mom = QFT(qubits)
+    inv_QFT_mom = inv_QFT(qubits)
+    circuit = cirq.Circuit(qft_mom,inv_QFT_mom)
+    print(circuit.to_text_diagram())
 
 
