@@ -1,6 +1,8 @@
 ## QVM provided by Cirq
 import cirq
+import cirq.circuits
 import cirq_google
+import cirq_google.transformers
 import qsimcirq
 import numpy as np
 from .Circuit import Circuit
@@ -60,7 +62,7 @@ class QVM:
 
     # TODO: def setup_with_config_file(): -> take yaml file and update QVM accordingly
         
-    def run_circuit(self, circuit: Circuit, repetitions:int, optimisation: bool) -> cirq.Result:
+    def run_circuit(self, circuit: cirq.Circuit, repetitions:int, optimisation: bool) -> cirq.Result:
         """ Runs a particular circuit on the QVM and returns the results.
 
         :param circuit: The circuit wished to be run on the QVM
@@ -71,21 +73,26 @@ class QVM:
         :rtype: cirq.Result
         """
 
+        # Makes sure only to use allowed gateset.
+        transformed_circuit = cirq.optimize_for_target_gateset(circuit, context=cirq.TransformerContext(deep=True), gateset=cirq_google.transformers.SycamoreTargetGateset())
+
         # Map circuit onto physical qubits using Router. This takes into account that two-qubit gates must operate on adjacent qubits.
         device_graph = self.device.metadata.nx_graph
         router = cirq.RouteCQC(device_graph)
 
-        routed_circuit, _, _ = router.route_circuit(circuit.get_cirq_circuit())
+        routed_circuit, _, _ = router.route_circuit(transformed_circuit)
+
+        transformed_routed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=cirq_google.transformers.SycamoreTargetGateset())
 
         # TODO: Get transformed circuit from Circuit. depends on what sort of optimizations depending on what processor. GET ISWAP, or FSIM or SYCAMORE 
         ## https://quantumai.google/reference/python/cirq/CompilationTargetGateset
 
-        transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=cirq.SqrtIswapTargetGateset())
         
         # Further optimisations on the circuit could be performed here. 
-        results = self.engine.get_sampler(self.processor_id).run(transformed_circuit, repetitions=repetitions)
+        results = self.engine.get_sampler(self.processor_id).run(transformed_routed_circuit, repetitions=repetitions)
 
         return results
+
 
     def get_two_gate_error_graph(self, targetGateset = 'ISwapPowGate'):
         """ Produces the error graph for the current simulated hardware with a target gateset in mind, and returns the nodes, the edges and smallest node to start with.
