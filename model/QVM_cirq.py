@@ -1,6 +1,8 @@
 ## QVM provided by Cirq
 import cirq
+import cirq.circuits
 import cirq_google
+import cirq_google.transformers
 import qsimcirq
 import numpy as np
 from .Circuit import Circuit
@@ -143,8 +145,7 @@ class QVM_cirq:
             self.device = cirq_google.engine.create_device_from_processor_id(self.processor_id)
             self.__update_engine_setup()
 
-
-    def run_circuit(self, circuit: Circuit, optimise: bool) -> cirq.Result:
+    def run_circuit(self, circuit: cirq.Circuit, optimised: bool) -> cirq.Result:
         """ Runs a particular circuit on the QVM and returns the results.
 
         :param circuit: The circuit wished to be run on the QVM
@@ -155,15 +156,10 @@ class QVM_cirq:
         :rtype: cirq.Result
         """
 
-        # Map circuit onto physical qubits using Router. This takes into account that two-qubit gates must operate on adjacent qubits.
-        device_graph = self.device.metadata.nx_graph
-        router = cirq.RouteCQC(device_graph)
-
-        routed_circuit, _, _ = router.route_circuit(circuit.get_cirq_circuit())
-
-
-        gate_set = None
-        if optimise:
+        ## Assume:
+        gate_set = cirq_google.transformers.SycamoreTargetGateset()
+    
+        if optimised and self.noisy:
         # Get optimal target gateset based on average lowest error out of the possible gatesets for that device.
             avg_errors = self.get_two_gate_avg_error()
             
@@ -179,13 +175,19 @@ class QVM_cirq:
                     gate_set = None
         
         ## https://quantumai.google/reference/python/cirq/CompilationTargetGateset
-        if gate_set != None:
-            transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=gate_set)
-        else:
-            transformed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True))
+        transformed_circuit = cirq.optimize_for_target_gateset(circuit, context=cirq.TransformerContext(deep=True), gateset=gate_set)
+
+
+        # Map circuit onto physical qubits using Router. This takes into account that two-qubit gates must operate on adjacent qubits.
+        device_graph = self.device.metadata.nx_graph
+        router = cirq.RouteCQC(device_graph)
+
+        routed_circuit, _, _ = router.route_circuit(transformed_circuit)
+
+        transformed_routed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=gate_set)
         
         # Further optimisations on the circuit could be performed here. 
-        results = self.engine.get_sampler(self.processor_id).run(transformed_circuit, repetitions=self.num_repetitions)
+        results = self.engine.get_sampler(self.processor_id).run(transformed_routed_circuit, repetitions=self.num_repetitions)
 
         return results
 
