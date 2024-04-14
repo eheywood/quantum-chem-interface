@@ -12,6 +12,7 @@
 
 import cirq
 import cirq.circuits
+import cirq.sim
 import cirq_google
 import numpy as np 
 from scipy.stats import norm
@@ -26,57 +27,98 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters):
     wave_func = p_in_box_wavefunc(energy_lvl,L)
 
     # 2) quantize grid space 2L into N. As assume box is from 0-L and > L is outside box. This is where we apply a 'penalty' on the potential energy, for being outside the box.
+
     N = int(2*L)
 
-    # 3) n qubits = log2(N). Plus 1 bc of the box
-    n_qubits = int(np.log2(N))
+    # 3) n qubits = log2(N). Plus 1 bc of ancilliary
+    n_qubits = int(np.log2(N)) + 1 
     qubits = cirq.LineQubit.range(n_qubits)
 
     box_amps = np.zeros((N))
     box_amps[0:L] = wave_func
     print(box_amps)
-    state_prepared_moment = state_prep(box_amps,qubits)
 
-    initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(qubits))
+    #box_amps = [0,0.5,0.5,0,0,0,0,0]
+    #state_prepared_moment = state_prep(box_amps,qubits)
+    state_prepared_moment = state_prep(box_amps,qubits[1:])
+
+    initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(*qubits[1:]))
     
     moments.append(state_prepared_moment)
     # for each time step:
     for i in range(num_of_iters):
 
-        # 4) QFT all quibits
-        qft_moment = QFT(qubits)
-        #moments.append(qft_moment)
-        moments.append(cirq.qft(*qubits))
-
-        # 5) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
-    
-        # assume m = 0.5, h_bar = 0
-        momentum_shifts = []
-        for x in range(N):
-            shift = ((x**2) / 2 * 0.5) * time_step
-            momentum_shifts.append(shift)
-        momentum_moment = cirq.Moment(cirq.DiagonalGate(momentum_shifts).on(*qubits))
-        moments.append(momentum_moment)
-
-        # 6) Inverse QFT
-        inv_qft_moment = inv_QFT(qubits)
-        #moments.append(inv_qft_moment)
-        moments.append(cirq.qft(*qubits,inverse=True))
-
-        # 7) Apply phase shift depending on potential energy... R gate??
-        potential_energy_shifts = [1000,1000] #multiply by time step means nothing here.
-        potential_moment = cirq.Moment(cirq.DiagonalGate(potential_energy_shifts).on(qubits[-1]))
+        # 4) Apply phase shift depending on highest order bit 
+        #potential_moment = cirq.Moment(cirq.DiagonalGate(potential_energy_shifts).on(qubits[-1]))
+        #potential_energy_shifts = [1000,1000] #multiply by time step means nothing here.
+        
+        potential_moment = cirq.Moment(cirq.rz(1.99*np.pi).on(qubits[len(qubits)-1]))
         moments.append(potential_moment)
 
 
+        # 5) QFT all quibits
+        qft_moment = QFT(qubits)
+        #moments.append(qft_moment)
+        moments.append(cirq.qft(*qubits[1:],without_reverse=True))
+
+        # 6) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
+    
+        # assume m = 0.5, h_bar = 0
+        #momentum_moment = cirq.Moment(cirq.DiagonalGate(momentum_shifts).on(*qubits))
+        #moments.append(momentum_moment)
+        moments.append(build_momentum_moment(qubits,time_step))
+
+        # 7) Inverse QFT
+        inv_qft_moment = inv_QFT(qubits)
+        #moments.append(inv_qft_moment)
+        moments.append(cirq.qft(*qubits[1:],inverse=True,without_reverse=True))
+
+
+
     # Should result in a matrix of probabilities, all adding to 1 and representing different positions within the box.
-    moments.append(cirq.measure(*qubits))
+    moments.append(cirq.measure(*qubits[1:]))
     final_circuit = cirq.Circuit(moments)
 
     print(final_circuit.to_text_diagram())
 
-    #print(optimised_circuit.to_text_diagram())
     return final_circuit, initial_state_circuit
+
+def build_momentum_moment(qubits,phi):
+    """ Builds the cirq.Moment for the momentum operator.
+
+    :param qubits: The list of qubits to apply it to
+    :type qubits: list
+    :param phi: The paramater to rotate the phase by
+    :type phi: float
+    :return: The moment containing the operator.    
+    :rtype: cirq.Moment
+    """
+
+    moment = []
+    n = len(qubits)
+
+    mini_moment = []
+    for j in range(n-1):
+        mini_moment.append(cirq.rz(phi/(2**(j+n-4))).on(qubits[n -1 - j]))
+    moment.append(cirq.Moment(mini_moment))
+
+    phases = [phi * (2**(4-i-j)) for i in range(1,n) for j in range(i+1,n)]
+    print("phases:", phases)
+
+    count = 0
+    for i in range(n-1,0,-1):
+        for j in range(i-1,0,-1):
+            ops = []
+            ops.append(cirq.Moment(cirq.CNOT(qubits[j],qubits[0])))
+            ops.append(cirq.Moment(cirq.CNOT(qubits[i],qubits[0])))
+            ops.append(cirq.Moment(cirq.rz(phases[count]).on(qubits[0])))
+            ops.append(cirq.Moment(cirq.CNOT(qubits[i],qubits[0])))
+            ops.append(cirq.Moment(cirq.CNOT(qubits[j],qubits[0])))
+            moment.append(ops)
+            count += 1
+
+    print(cirq.Circuit(moment).to_text_diagram())
+    return moment
 
 
 def gaussian_wavefunc(mean,spread,N):
