@@ -19,7 +19,7 @@ from scipy.stats import norm
 import math
 from state_preparation import state_prep
 
-def build_circuit(L:int, energy_lvl, time_step, num_of_iters):
+def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
     
     moments = []
 
@@ -40,7 +40,7 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters):
 
     #box_amps = [0,0.5,0.5,0,0,0,0,0]
     #state_prepared_moment = state_prep(box_amps,qubits)
-    state_prepared_moment = state_prep(box_amps,qubits[1:])
+    state_prepared_moment = state_prep(box_amps,qubits[1:],backend)
 
     initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(*qubits[1:]))
     

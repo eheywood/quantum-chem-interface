@@ -61,7 +61,7 @@ def reverse_qubit_order(qubits:list) -> cirq.Moment:
     return moment
 
 
-def state_prep(amps:list,qubits:list) -> cirq.Moment:
+def state_prep(amps:list,qubits:list,backend:str) -> cirq.Moment:
     """_summary_
 
     :param amps: The probability distribution for qubit states. Must be in order from 000,001,...110,111.
@@ -116,7 +116,7 @@ def state_prep(amps:list,qubits:list) -> cirq.Moment:
                 while len(int_control_order) != num_controls:
                     int_control_order = [0] + int_control_order
 
-                print(qubits[:q])
+                #print(qubits[:q])
                 #print("Controls: ", int_control_order)
                 #print("Controlled by: ", qubits[:q])
                 moment.append(cirq.Moment(cirq.Ry(rads=beta).on(qubits[q]).controlled_by(*qubits[:q],control_values=int_control_order)))
@@ -124,12 +124,12 @@ def state_prep(amps:list,qubits:list) -> cirq.Moment:
         q += 1
         num_controls += 1
 
-    reverse_moment = reverse_qubit_order(qubits)
-    #moment.append(reverse_moment)
+    if backend == 'qiskit':
+        reverse_moment = reverse_qubit_order(qubits)
+        moment.append(reverse_moment)
 
     return moment
                 
-
 
 if __name__ == '__main__':
     qubits = cirq.LineQubit.range(3)

@@ -47,11 +47,16 @@ class Circuit:
 
         # Not 100% support or finished from Cirq, use most basic quantum gates is possible, as the translating between these in Cirq and qasm is the most reliable
         try:
-            qasm_circuit = cirq.QasmOutput(self.__cirq_circuit,self.__cirq_qubit_list)
-            qasm_filename = "../simulations/" + self.name + "_qasm.txt"
-            qasm_circuit.save(qasm_filename)
+            #qasm_circuit = cirq.QasmOutput(self.__cirq_circuit, self.__cirq_qubit_list)
+            qasm_filename = "./model/simulations/" + self.name + "_qasm.txt"
+            #qasm_circuit.save(qasm_filename)
+            
 
-            self.qasm_circuit = QuantumCircuit.from_qasm_file(qasm_filename)
+            self.__update_qubit_list()
+            self.__cirq_circuit.save_qasm(qasm_filename,qubit_order=cirq.QubitOrder.explicit(self.__cirq_qubit_list))
+
+            self.__qasm_circuit = QuantumCircuit.from_qasm_file(qasm_filename)
+            print("qasm_circuit_type: ", type(self.__qasm_circuit))
         except QasmException: 
             raise
 
@@ -60,9 +65,11 @@ class Circuit:
         """
 
         self.__cirq_qubit_list = []
-        for i in range(self.__cirq_circuit.all_qubits):
+        for i in self.__cirq_circuit.all_qubits():
             self.__cirq_qubit_list.append(i)
-
+        self.__cirq_qubit_list = sorted(self.__cirq_qubit_list)
+        self.__cirq_qubit_list.reverse()
+        print(self.__cirq_qubit_list)
 
     ## LOADING CIRCUIT METHODS:
             
@@ -95,6 +102,11 @@ class Circuit:
         self.__qasm_circuit_string = qasm_str
         self.__qasm_circuit = QuantumCircuit.from_qasm_str(qasm_str)
 
+    def set_cirq_circuit(self,circuit: cirq.Circuit):
+        self.__cirq_circuit = circuit
+    
+    def set_qiskit_circuit(self,circuit: QuantumCircuit):
+        self.__qasm_circuit = circuit
 
     ## GETTERS:
         
@@ -134,6 +146,10 @@ class Circuit:
             self.__update_qubit_list()
         
         return self.__cirq_circuit.to_text_diagram()
+
+    def get_mpl_circuit(self):
+        
+        self.__qasm_circuit.draw('mpl')
 
 
 

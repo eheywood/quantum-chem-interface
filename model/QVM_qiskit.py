@@ -146,8 +146,8 @@ class QVM_qiskit:
         """
 
         ## Transpiled circuit
-        circ = transpile(circuit,self.simulator)
-
+        circ = transpile(circuit,backend=self.simulator)
+        
         ## Run and get counts:
         result = self.simulator.run(circ).result()
         counts = result.get_counts(circ)
