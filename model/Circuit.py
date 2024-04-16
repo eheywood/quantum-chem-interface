@@ -6,34 +6,21 @@ import os
 
 class Circuit:
 
-    qvm_hardware = None
     name = None
     __cirq_circuit = None
     __cirq_qubit_list = [] # List[cirq.Qubit]
     __qasm_circuit = None
     __qasm_circuit_string = None
 
-    def __init__(self, name: str, QVM_hardware: str) -> None:
+    def __init__(self, name: str) -> None:
         """ Constructs the Circuit class
 
         :param name: Name of the circuit.
         :type name: str
-        :param QVM_hardware: The name of the hardware the QVM is simulating. If no QVM use a default of 'weber'
-        :type QVM_hardware: str
         """
-        
-        self.qvm_hardware = QVM_hardware
-        self.name = name
-    
-    ## SETTERS:
-        
-    def set_QVM_hardware(self, hardware: str):
-        """ Sets the name of the hardware the QVM is simulating
 
-        :param hardware: The name of the hardware being simulated
-        :type hardware: str
-        """
-        self.qvm_hardware = hardware
+        self.name = name
+        
     
     ## PRIVATE UPDATE CIRCUIT METHODS:
         
@@ -60,7 +47,7 @@ class Circuit:
             self.__cirq_circuit.save_qasm(qasm_filename,qubit_order=cirq.QubitOrder.explicit(self.__cirq_qubit_list))
 
             self.__qasm_circuit = QuantumCircuit.from_qasm_file(qasm_filename)
-            print("qasm_circuit_type: ", type(self.__qasm_circuit))
+
         except QasmException: 
             raise
 
@@ -73,7 +60,6 @@ class Circuit:
             self.__cirq_qubit_list.append(i)
         self.__cirq_qubit_list = sorted(self.__cirq_qubit_list)
         self.__cirq_qubit_list.reverse()
-        print(self.__cirq_qubit_list)
 
     ## LOADING CIRCUIT METHODS:
             
