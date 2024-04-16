@@ -17,7 +17,7 @@ class Circuit:
 
         :param name: Name of the circuit.
         :type name: str
-        :param QVM_hardware: The name of the hardware teh QVM is simulating. If no QVM use a default of 'weber'
+        :param QVM_hardware: The name of the hardware the QVM is simulating. If no QVM use a default of 'weber'
         :type QVM_hardware: str
         """
         

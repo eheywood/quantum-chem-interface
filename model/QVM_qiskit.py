@@ -3,8 +3,11 @@ from qiskit_aer.noise import NoiseModel
 from qiskit import QuantumCircuit, transpile
 from qiskit.providers import fake_provider 
 from qiskit_aer import AerSimulator
-
-class QVM_qiskit:
+import sys
+sys.path.append('./model/')
+import QVM
+import Circuit
+class QVM_qiskit(QVM.QVM):
 
     ## See https://docs.quantum.ibm.com/api/qiskit/providers_fake_provider for other examples of fake backends. 
     noisy = True
@@ -136,7 +139,7 @@ class QVM_qiskit:
             
         
 
-    def run_circuit(self, circuit: QuantumCircuit):
+    def run_circuit(self, circuit: Circuit,optimised:bool):
         """ Runs the circuit on the QVM.
 
         :param circuit: The circuit to be run
@@ -146,7 +149,7 @@ class QVM_qiskit:
         """
 
         ## Transpiled circuit
-        circ = transpile(circuit,backend=self.simulator)
+        circ = transpile(circuit.get_qiskit_circuit(),backend=self.simulator)
         
         ## Run and get counts:
         result = self.simulator.run(circ).result()
