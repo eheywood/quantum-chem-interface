@@ -1,0 +1,13 @@
+// Generated from Cirq v1.3.0
+
+OPENQASM 2.0;
+include "qelib1.inc";
+
+
+// Qubits: [q(0)]
+qreg q[1];
+creg m_meas[1];
+
+
+ry(0) q[0];
+measure q[0] -> m_meas[0];
