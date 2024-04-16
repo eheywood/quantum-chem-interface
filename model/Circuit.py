@@ -7,6 +7,8 @@ import os
 class Circuit:
 
     name = None
+    num_qubits = None
+
     __cirq_circuit = None
     __cirq_qubit_list = [] # List[cirq.Qubit]
     __qasm_circuit = None
@@ -94,6 +96,7 @@ class Circuit:
 
     def set_cirq_circuit(self,circuit: cirq.Circuit):
         self.__cirq_circuit = circuit
+        self.num_qubits = len(circuit.all_qubits())
     
     def set_qiskit_circuit(self,circuit: QuantumCircuit):
         self.__qasm_circuit = circuit

@@ -160,7 +160,8 @@ class Controller:
 
         ax[1].bar(results.keys(),results.values())
         ax[1].title.set_text("Initial State")
-
+        
+        #TODO: wht plt not showing
         plt.show()
     
     def submit_IBMQ_job(self, circuit:Circuit, initial_state:Circuit):
@@ -176,6 +177,7 @@ class Controller:
             
 
     def check_IBM_job_status(self):
+        #TODO: submit job to IBM
         print("ibm")
 
 

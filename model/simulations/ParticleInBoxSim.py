@@ -17,7 +17,7 @@ import cirq_google
 import numpy as np 
 from scipy.stats import norm
 import math
-from state_preparation import state_prep
+from model.simulations.state_preparation import state_prep
 
 def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
     
