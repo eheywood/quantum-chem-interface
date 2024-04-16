@@ -197,7 +197,7 @@ class CMD_line_interface:
             params.update({parameter_names[i]: val})
 
 
-        return params
+        return params, backend_options[backend_index]
 
      ### PARTICLE IN A BOX METHODS: 
     
