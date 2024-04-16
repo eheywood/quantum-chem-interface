@@ -84,7 +84,6 @@ def state_prep(amps:list,qubits:list,backend:str) -> cirq.Moment:
 
     ## Square root all vals so the |amps|^2 adds to 1 as required for a quantum  machine.
     amps = np.sqrt(amps)
-    print(amps)
 
     moment = []
 
@@ -112,7 +111,7 @@ def state_prep(amps:list,qubits:list,backend:str) -> cirq.Moment:
 
                 ## Ensuring that the control order is the correct length so the control conditions are correct.
                 ## eg: 0 and 1 must become 00 and 01 if on qubit 3
-                print((2**(n-s-1)))
+                #print((2**(n-s-1)))
                 while len(int_control_order) != num_controls:
                     int_control_order = [0] + int_control_order
 
@@ -124,7 +123,7 @@ def state_prep(amps:list,qubits:list,backend:str) -> cirq.Moment:
         q += 1
         num_controls += 1
 
-    if backend == 'qiskit':
+    if backend == 'qiskit-QVM' or backend == 'IBM-Q':
         reverse_moment = reverse_qubit_order(qubits)
         moment.append(reverse_moment)
 

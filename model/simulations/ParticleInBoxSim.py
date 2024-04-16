@@ -274,4 +274,6 @@ if __name__ == '__main__':
     circuit = cirq.Circuit(qft_mom,inv_QFT_mom)
     print(circuit.to_text_diagram())
 
+    print(p_in_box_wavefunc(1,8))
+
 
