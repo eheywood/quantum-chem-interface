@@ -5,9 +5,7 @@ import cirq_google
 import cirq_google.transformers
 import qsimcirq
 import numpy as np
-import sys
-sys.path.append('./model/')
-import QVM,Circuit
+from model import QVM,Circuit
 
 class QVM_cirq(QVM.QVM):
 
@@ -188,12 +186,12 @@ class QVM_cirq(QVM.QVM):
         routed_circuit, _, _ = router.route_circuit(transformed_circuit)
 
         transformed_routed_circuit = cirq.optimize_for_target_gateset(routed_circuit, context=cirq.TransformerContext(deep=True), gateset=gate_set)
+
         
         # Further optimisations on the circuit could be performed here. 
         results = self.engine.get_sampler(self.processor_id).run(transformed_routed_circuit, repetitions=self.num_repetitions)
 
         return results
-
     def get_two_gate_avg_error(self):
         """ Gets the average error for two-quibt gates. 
 

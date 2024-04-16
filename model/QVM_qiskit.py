@@ -3,10 +3,7 @@ from qiskit_aer.noise import NoiseModel
 from qiskit import QuantumCircuit, transpile
 from qiskit.providers import fake_provider 
 from qiskit_aer import AerSimulator
-import sys
-sys.path.append('./model/')
-import QVM
-import Circuit
+from model import QVM,Circuit
 class QVM_qiskit(QVM.QVM):
 
     ## See https://docs.quantum.ibm.com/api/qiskit/providers_fake_provider for other examples of fake backends. 

@@ -2,6 +2,7 @@ import cirq
 from cirq.contrib.qasm_import import circuit_from_qasm, QasmException
 import json
 from qiskit import QuantumCircuit
+import os
 
 class Circuit:
 
@@ -47,8 +48,11 @@ class Circuit:
 
         # Not 100% support or finished from Cirq, use most basic quantum gates is possible, as the translating between these in Cirq and qasm is the most reliable
         try:
+            if not os.path.isdir('./circuits'):
+                os.mkdir('./circuits')
+
             #qasm_circuit = cirq.QasmOutput(self.__cirq_circuit, self.__cirq_qubit_list)
-            qasm_filename = "./model/simulations/" + self.name + "_qasm.txt"
+            qasm_filename = "./circuits/" + self.name + "_qasm.txt"
             #qasm_circuit.save(qasm_filename)
             
 

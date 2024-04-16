@@ -1,6 +1,5 @@
 import abc
-import Circuit
-
+from model import Circuit
 class QVM(abc.ABC):
 
     @abc.abstractmethod

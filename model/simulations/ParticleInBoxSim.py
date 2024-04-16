@@ -76,7 +76,7 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
 
 
     # Should result in a matrix of probabilities, all adding to 1 and representing different positions within the box.
-    moments.append(cirq.measure(*qubits[1:]))
+    moments.append(cirq.measure(*qubits[1:],key='meas'))
     final_circuit = cirq.Circuit(moments)
 
     print(final_circuit.to_text_diagram())
