@@ -1,6 +1,8 @@
 import numpy as np
 import cirq
 
+np.seterr(all='ignore')
+
 ### STATE PREPARATION for positive REAL values. Will not work with imaginary or negative values.
 
 def calc_angle(s:int,j:int,amps:list) -> float:

@@ -36,10 +36,6 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
 
     box_amps = np.zeros((N))
     box_amps[0:L] = wave_func
-    print(box_amps)
-
-    #box_amps = [0,0.5,0.5,0,0,0,0,0]
-    #state_prepared_moment = state_prep(box_amps,qubits)
     state_prepared_moment = state_prep(box_amps,qubits[1:],backend)
 
     initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(*qubits[1:],key='meas'))
@@ -57,20 +53,13 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
 
 
         # 5) QFT all quibits
-        qft_moment = QFT(qubits)
-        #moments.append(qft_moment)
         moments.append(cirq.qft(*qubits[1:],without_reverse=True))
 
-        # 6) Apply a diagonal phase shift to the quibits (controlled Z gate?). Depends on the computational basis.....? This simulates the kinetic energy operator
-    
+        # 6) Apply a diagonal phase shift to the quibits (controlled Z gate?).This simulates the kinetic energy operator
         # assume m = 0.5, h_bar = 0
-        #momentum_moment = cirq.Moment(cirq.DiagonalGate(momentum_shifts).on(*qubits))
-        #moments.append(momentum_moment)
         moments.append(build_momentum_moment(qubits,time_step))
 
         # 7) Inverse QFT
-        inv_qft_moment = inv_QFT(qubits)
-        #moments.append(inv_qft_moment)
         moments.append(cirq.qft(*qubits[1:],inverse=True,without_reverse=True))
 
 
@@ -78,8 +67,6 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
     # Should result in a matrix of probabilities, all adding to 1 and representing different positions within the box.
     moments.append(cirq.measure(*qubits[1:],key='meas'))
     final_circuit = cirq.Circuit(moments)
-
-    print(final_circuit.to_text_diagram())
 
     return final_circuit, initial_state_circuit
 
@@ -103,7 +90,7 @@ def build_momentum_moment(qubits,phi):
     moment.append(cirq.Moment(mini_moment))
 
     phases = [phi * (2**(4-i-j)) for i in range(1,n) for j in range(i+1,n)]
-    print("phases:", phases)
+    #print("phases:", phases)
 
     count = 0
     for i in range(n-1,0,-1):
@@ -117,7 +104,7 @@ def build_momentum_moment(qubits,phi):
             moment.append(ops)
             count += 1
 
-    print(cirq.Circuit(moment).to_text_diagram())
+    #print(cirq.Circuit(moment).to_text_diagram())
     return moment
 
 
