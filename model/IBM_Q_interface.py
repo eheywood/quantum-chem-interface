@@ -2,7 +2,8 @@ from qiskit import QuantumCircuit, transpile
 from qiskit_ibm_runtime import QiskitRuntimeService, SamplerV2 as Sampler
 from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit_aer import AerSimulator
-
+from model.Circuit import Circuit
+from  qiskit.providers import JobStatus
 class IBM_Q:
 
     optimisation_lvl = 1
@@ -69,12 +70,11 @@ class IBM_Q:
         :return: The status of the job.
         :rtype: JobStatus (Enum)
         """
-        
         try:
-            job = self.service(job_id)
-        except:
+            job = self.service.job(job_id)
+        except:     
             raise Exception("Could not find job. Check job ID")
-        
+
         return job.status()
 
     def get_results_from_job(self,job_id):
@@ -93,11 +93,11 @@ class IBM_Q:
             raise Exception("Could not find job. Check job ID")
 
         status = job.status()
-
-        match status.name():
-            case 'DONE':
-                result = job.results()
-                distribution = result.quasi_dist[0].binary_probabilities()
+        
+        match status:
+            case JobStatus.DONE:
+                result = job.result()
+                distribution = result[0].data.m_meas.get_counts()
                 complete = True
 
             case _:
@@ -107,8 +107,7 @@ class IBM_Q:
         return complete, distribution
         
 
-
-    def submit_job(self, circuit:QuantumCircuit):
+    def submit_job(self, circuit:Circuit):
         """ Submits a job to IBM Q according to pre-specified setup.
 
         :param circuit: The circuit to submit
@@ -119,7 +118,7 @@ class IBM_Q:
 
         ### Transpile circuit
         pm = generate_preset_pass_manager(optimization_level=self.optimisation_lvl, backend=self.backend)
-        circ = pm.run(circuit)
+        circ = pm.run(circuit.get_qiskit_circuit())
 
         ### Run
         sampler = Sampler(self.backend)
@@ -129,7 +128,7 @@ class IBM_Q:
         return job_id
 
 
-    def verify_via_sim(self, circuit:QuantumCircuit):
+    def verify_via_sim(self, circuit:Circuit):
         """ Verifies the circuit works using a simulator. Returns the results from the simulation.
 
         :param circuit: The circuit to validate.
@@ -141,15 +140,16 @@ class IBM_Q:
         try:
             simulator = AerSimulator.from_backend(self.backend)
 
-            circ = transpile(circuit,simulator)
+            circ = transpile(circuit.get_qiskit_circuit(),simulator)
 
             sampler = Sampler(simulator)
             job = sampler.run([circ],shots = self.num_repetitions)
             
-            #TODO: improve this to remove 'meas' name requirement
-            result = job.result()[0].data.meas.get_counts()
+            result = job.result()[0].data.m_meas.get_counts()
+
         except:
             return None
+        
         return result
 
         
