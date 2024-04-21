@@ -21,7 +21,7 @@ class CMD_line_interface:
 
 
     def options_page(self, options, title):
-        """ Displays a list of interactable options. Returns the users choice when the Enter key is pressed
+        """ Displays a list of interactive options. Returns the users choice when the Enter key is pressed
 
         :param menu_options: List of options to display
         :type menu_options: List
@@ -202,6 +202,8 @@ class CMD_line_interface:
         return params, backend_options[backend_index]
 
     def waiting_page(self, msg:str):
+        """ Creates a waiting page that stays the same until next page is called.
+        """
 
         self.stdscr.clear()
 
@@ -210,6 +212,13 @@ class CMD_line_interface:
         self.stdscr.refresh()
     
     def yes_no_question(self, question:str):
+        """ Produces a page with a yes or no question.
+
+        :param question: The question to ask
+        :type question: str
+        :return: True if yes, False if no.
+        :rtype: _type_
+        """
         
         msg = question + " (y/n): "
         self.stdscr.clear()
@@ -222,9 +231,6 @@ class CMD_line_interface:
             return True
 
         return False
-        
-    ### PARTICLE IN A BOX METHODS: 
     
-    # Add other problems here...
     
 

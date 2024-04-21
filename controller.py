@@ -157,7 +157,7 @@ class Controller:
         circuit_name = 'particle_in_box_e' + str(energy_lvl) + "_q" + str(np.log(box_length) + 2)
         initial_name = 'initial_state_circuit_e' + str(energy_lvl) + "_q" + str(np.log(box_length))
         particle_in_box_circuit = Circuit(circuit_name)
-        initial_state_circuit = Circuit("initial_state")
+        initial_state_circuit = Circuit(initial_name)
         circuit, initial_circuit = ParticleInBoxSim.build_circuit(box_length,energy_lvl,time_step_size,num_iters, backend)
         particle_in_box_circuit.set_cirq_circuit(circuit)  
         initial_state_circuit.set_cirq_circuit(initial_circuit)
@@ -413,10 +413,6 @@ class Controller:
             self.view.display_temp_msg("Job is not yet complete. Please try again later. ")
             time.sleep(2)
             self.menu()
-
-
-
-
 
 if __name__ == '__main__':
 	controller = Controller()

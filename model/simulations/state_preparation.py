@@ -131,10 +131,3 @@ def state_prep(amps:list,qubits:list,backend:str) -> cirq.Moment:
 
     return moment
                 
-
-if __name__ == '__main__':
-    qubits = cirq.LineQubit.range(3)
-    #a = [0,0.5,0.5,0]
-    a = [0.2,0,0.5,0,0,0,0.2,0.1]
-    moment = state_prep(a,qubits)
-    print(cirq.Circuit(moment).to_text_diagram())

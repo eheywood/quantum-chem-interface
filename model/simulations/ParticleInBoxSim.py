@@ -249,18 +249,5 @@ class R_k_inv(cirq.Gate):
 
     def _circuit_diagram_info_(self, args):
         return "R_" + str(self.k) + "^+"
-    
-if __name__ == '__main__':
-    time_step = 0.1
-
-    #circuit = build_circuit(4,1,0.1,1)
-
-    qubits = cirq.LineQubit.range(5)
-    qft_mom = QFT(qubits)
-    inv_QFT_mom = inv_QFT(qubits)
-    circuit = cirq.Circuit(qft_mom,inv_QFT_mom)
-    print(circuit.to_text_diagram())
-
-    print(p_in_box_wavefunc(1,8))
 
 
