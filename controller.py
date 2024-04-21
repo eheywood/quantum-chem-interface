@@ -10,6 +10,7 @@ from model.IBM_Q_interface import IBM_Q
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+from  qiskit.providers import JobStatus
 
 import yaml
 import time
@@ -37,7 +38,7 @@ class Controller:
         """ Creates a menu page using the view and sends the view the menu options for the user to choose from. 
         """
 
-        option_index = self.view.menu_page(self.menu_options)
+        option_index = self.view.options_page(self.menu_options, "Quantum-Chem-Interface")
 
         match self.menu_options[option_index]:
             case "Particle In a Box":
@@ -257,7 +258,7 @@ class Controller:
                     self.ibmq_interface  = IBM_Q(token.strip())
             except:
                 self.view.display_temp_msg("API Token failed. Check token and try again.")
-                time.sleep(10)
+                time.sleep(3)
                 self.menu()
         
         self.view.waiting_page("Successfully connected to IBM-Q. Simulating expected results... ")
@@ -266,12 +267,12 @@ class Controller:
 
         if simulated_results == None:
             self.view.display_temp_msg("Simulation failed. Circuit is broken")
-            time.sleep(10)
+            time.sleep(3)
             self.menu()
         
         if expected_results == None:
             self.view.display_temp_msg("Exact results failed. Circuit is broken")
-            time.sleep(10)
+            time.sleep(3)
             self.menu()
         
         print(expected_results)
@@ -302,12 +303,12 @@ class Controller:
         box_len = ((2 ** (circuit.num_qubits-1)) / 2) - 0.5
         fig, ax = plt.subplots(nrows = 1, ncols = 2)
         ax[0].bar(expected_results.keys(),expected_results.values())
-        ax[0].axvline(box_len,color='b',label='Box end')
+        ax[0].axvline(box_len,color='m',label='Box end')
         ax[0].title.set_text("Exact expected results")
         ax[0].legend()
 
         ax[1].bar(simulated_results.keys(),simulated_results.values())
-        ax[1].axvline(box_len,color='b',label='Box end')
+        ax[1].axvline(box_len,color='m',label='Box end')
 
         ax[1].title.set_text("Noisy simulated results")
         ax[1].legend()
@@ -321,7 +322,7 @@ class Controller:
                 path = "./job_ids.yaml"
 
                 with open(path, 'w') as file:
-                    params.update({'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S")})
+                    params.update({'date': datetime.now().strftime("%d/%m/%Y %H:%M")})
                     to_dump = {job_id:params}
                     yaml.dump(to_dump,file,default_flow_style=False)
                 
@@ -337,9 +338,84 @@ class Controller:
         """ Checks and gets the status of a job set to an IBM-Q machine.
         """
 
-        #TODO: Think about storing job ids and descriptions locally?
-    
-        print("ibm")
+        if self.ibmq_interface == None:    
+
+            token = self.view.get_text_from_user("Input API token for IBM-Q: ")
+            token = token.replace(" ","")
+            token = token.replace("\n","")
+
+            self.view.waiting_page("Connecting...")
+                                    
+            if self.ibmq_interface == None:
+                try:
+                    if self.config != None:
+                        self.ibmq_interface = IBM_Q(token.strip(),self.config)
+                    else:
+                        self.ibmq_interface  = IBM_Q(token.strip())
+                except:
+                    self.view.display_temp_msg("API Token failed. Check token and try again.")
+                    time.sleep(3)
+                    self.menu()
+        
+        ## Get list of jobs from yaml file
+        path = "./job_ids.yaml"
+        
+        
+        try:
+            file = open(path,'r')
+            job_ids = yaml.safe_load(file)   
+        except:
+            self.view.display_temp_msg("No job-ids found. Please check " + path + " exists and contains job-ids.")
+            time.sleep(3)
+            self.menu()
+        
+        job_strs = []
+        for job,details in job_ids.items():
+            details = job + ' -> ' + details['date'] + " L: " + details['Size of Box'] + " energy level: " + details['Eigenstate/Energy Level'] + " time step: " + details['Time Step Size'] + "x " + details['Number of time steps']
+            job_strs.append(details)
+
+        option = self.view.options_page(job_strs, "Job ID's")        
+
+        job_id = list(job_ids.keys())[option]
+
+        status = self.ibmq_interface.check_job_status(job_id)
+
+        if status == JobStatus.DONE:
+            ## Get results
+            self.view.waiting_page("Job complete, getting results...")
+            _, result= self.ibmq_interface.get_results_from_job(job_id)
+
+            box_len = int(job_ids[job_id]['Size of Box'])
+            num_measures = int(np.log2(box_len) + 1)
+
+            for i in range(2 ** num_measures):
+                    bin_num = bin(i)[2:]
+
+                    while len(bin_num) != len(bin((2 ** num_measures) -1)[2:]):
+                        bin_num = '0' + bin_num
+                    
+                    count = result.get(bin_num)
+                    if count == None:
+                        result.update({i:0})
+                    else:
+                        result.pop(bin_num,None)
+                        result.update({i:count})
+                    
+            fig,ax = plt.subplots()
+            ax.bar(result.keys(),result.values())
+            ax.axvline(box_len-0.5,color='m',label='Box end')
+            ax.legend()
+            plt.show()
+
+            self.menu()
+
+        else:
+            self.view.display_temp_msg("Job is not yet complete. Please try again later. ")
+            time.sleep(2)
+            self.menu()
+
+
+
 
 
 if __name__ == '__main__':

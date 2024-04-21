@@ -11,7 +11,7 @@ from model import QVM
 class QVM_cirq(QVM.QVM):
 
     processor_id = 'weber'
-    noisy = True
+    noisy = False
 
     noise_property = None
     noise_model = None
