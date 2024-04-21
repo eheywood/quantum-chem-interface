@@ -20,12 +20,12 @@ class CMD_line_interface:
         max_y = curses.LINES
 
 
-    def menu_page(self, menu_options):
-        """ Displays a list of interactable menu options. Returns the users menu choice when the Enter key is pressed
+    def options_page(self, options, title):
+        """ Displays a list of interactable options. Returns the users choice when the Enter key is pressed
 
-        :param menu_options: List of menu options to display
+        :param menu_options: List of options to display
         :type menu_options: List
-        :return: The index of the menu choice
+        :return: The index of the options choice
         :rtype: int
         """
         
@@ -33,14 +33,16 @@ class CMD_line_interface:
         self.stdscr.nodelay(False)
         choice = 0
 
+        self.stdscr.addstr(1,1,title,curses.A_UNDERLINE)
+
         while True:
             x_pos = 1
-            y_pos = 5
-            for i in range(len(menu_options)):
+            y_pos = 3
+            for i in range(len(options)):
                 if i == choice:
-                    self.stdscr.addstr(y_pos,x_pos,menu_options[i], curses.A_REVERSE)
+                    self.stdscr.addstr(y_pos,x_pos,options[i], curses.A_REVERSE)
                 else:
-                    self.stdscr.addstr(y_pos,x_pos,menu_options[i])
+                    self.stdscr.addstr(y_pos,x_pos,options[i])
                 y_pos += 1
         
             self.stdscr.refresh()
@@ -51,14 +53,14 @@ class CMD_line_interface:
                 if choice != 0:
                     choice -= 1
             elif c == curses.KEY_DOWN:
-                if choice != (len(menu_options) -1):
+                if choice != (len(options) -1):
                     choice += 1
             elif c == '\n':
                 break   
    
         return choice
 
-    def get_config_filepath(self):
+    def get_text_from_user(self, msg:str):
         """ Gets a filepath for the configuration file from the user.
 
         :return: The user inputted filepath 
@@ -66,7 +68,7 @@ class CMD_line_interface:
         """
         self.stdscr.clear()
 
-        msg = "Enter path to configuration file: (hit Ctrl-G to send)"
+        msg = msg + " (hit Ctrl-G to send)"
         self.stdscr.addstr(0, 0, msg)
 
         win = curses.newwin(3,len(msg), 2,1)
@@ -79,9 +81,9 @@ class CMD_line_interface:
         box.edit()
 
         # Get resulting contents
-        path = box.gather()
+        text = box.gather()
 
-        return path
+        return text
 
     def display_temp_msg(self,msg:str):
         """ Displays a message on the screen.
@@ -189,7 +191,7 @@ class CMD_line_interface:
                 c = self.stdscr.get_wch()
                 if c == '\n':
                     choice += 1
-            elif c == 'q':
+            elif c == ord('q'):
                 return None
 
         for i in range(len(parameter_names)):
@@ -199,9 +201,29 @@ class CMD_line_interface:
 
         return params, backend_options[backend_index]
 
-    ##TODO: Waiting page...
+    def waiting_page(self, msg:str):
 
-     ### PARTICLE IN A BOX METHODS: 
+        self.stdscr.clear()
+
+        self.stdscr.addstr(1,1,msg)
+
+        self.stdscr.refresh()
+    
+    def yes_no_question(self, question:str):
+        
+        msg = question + " (y/n): "
+        self.stdscr.clear()
+
+        self.stdscr.addstr(1,1,msg)
+
+        c = self.stdscr.getch()
+
+        if c == ord('y'):
+            return True
+
+        return False
+        
+    ### PARTICLE IN A BOX METHODS: 
     
     # Add other problems here...
     
