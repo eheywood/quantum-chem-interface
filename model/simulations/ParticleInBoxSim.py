@@ -42,7 +42,7 @@ def build_circuit(L:int, energy_lvl, time_step, num_of_iters,backend):
     #state_prepared_moment = state_prep(box_amps,qubits)
     state_prepared_moment = state_prep(box_amps,qubits[1:],backend)
 
-    initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(*qubits[1:]))
+    initial_state_circuit = cirq.Circuit(state_prepared_moment,cirq.measure(*qubits[1:],key='meas'))
     
     moments.append(state_prepared_moment)
     # for each time step:
@@ -170,7 +170,7 @@ def rectangular_wavefunc(peak_mid,peak_length,N):
 def p_in_box_wavefunc(energy_lvl,L):
 
     wave_func = np.zeros((L))
-    for x in range(L-1):
+    for x in range(L):
         wave_func[x] = np.sqrt(2 / L) * np.sin((energy_lvl * np.pi * x)/L)
 
     return wave_func / sum(wave_func)
