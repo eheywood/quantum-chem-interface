@@ -11,7 +11,7 @@ qiskit-qvm:
   noise_on: False
   repetitions : 1000
   noise_model: "default" # or custom. If custom will need to update the QVM with this prior to running a circuit
-  backend_name: "default" # same as noise_model
+  backend_name: 'fake_127q_pulse_v1' # same as noise_model
 # Settings for IBM-Q Interface
 IBM-Q:
   backend_name: "ibm-brisbane"

@@ -3,6 +3,7 @@ sys.path.append('./model/simulations/')
 from model.Circuit import Circuit
 from model.simulations.ParticleInBoxSim import build_circuit
 from model.QVM_cirq import QVM_cirq
+from model.QVM_qiskit import QVM_qiskit
 
 import yaml
 
@@ -17,18 +18,18 @@ def main():
 
     #test_circuit = Circuit('test','weber')
 
-    file = open("model/simulations/qasm.txt", 'r')
+    file = open("circuits/qasm.txt", 'r')
 
-    test_circuit = Circuit("test",'weber')
+    test_circuit = Circuit("test")
     test_circuit.qiskit_load_from_qasm(file.read())
 
     config_file = open('config.yaml','r')
     config = yaml.safe_load(config_file)
     #virtualMachine = QVM_cirq(config=config['cirq-qvm'])
+    
     #result = virtualMachine.run_circuit(test_circuit,False)
     
-    #print(result)
-    #virtualMachine = QVM_qiskit(config=config['qiskit-qvm'])
+    virtualMachine = QVM_cirq(config=config['cirq-qvm'])
     #results = virtualMachine.run_circuit(test_circuit.get_qiskit_circuit())
     #print(results)
     
@@ -44,17 +45,30 @@ def main():
     #print(status)
 
 
-    particle_circuit, initial_state_circuit  = build_circuit(8,1,0.1,1)
+    particle_circuit, initial_state_circuit  = build_circuit(8,1,0.1,1,'cirq')
 
-    virtualMachine = QVM_cirq(config=config['cirq-qvm'])
+    particleCircuit = Circuit("ParticleInBox2")
+    particleCircuit.set_cirq_circuit(particle_circuit)
 
-    result1 = virtualMachine.run_circuit(initial_state_circuit,True)
-    fig,ax = plt.subplots(nrows=1,ncols =2)
-    _ = cirq.plot_state_histogram(result1, ax[0])
+    #virtualMachine = QVM_qiskit(config=config['qiskit-qvm'])
 
-    result1 = virtualMachine.run_circuit(particle_circuit,True)
-    _ = cirq.plot_state_histogram(result1, ax[1])
+    Circuit_initial = Circuit("InitialState")
+    Circuit_initial.set_cirq_circuit(initial_state_circuit)
+    
+    result1 = virtualMachine.run_circuit(particleCircuit,False)
+    #sorted_vals = [result1[key] for key in sorted(result1.keys())]
+    print(result1)
+
+
+    #Circuit_initial.get_mpl_circuit()
+
+    _ = cirq.plot_state_histogram(result1, plt.subplot())
     plt.show()
+
+
+    #result1 = virtualMachine.run_circuit(particle_circuit,True)
+    #_ = cirq.plot_state_histogram(result1, ax[1])
+    #plt.show()
 
     # result_1 = cirq.Simulator().compute_amplitudes(initial_state_circuit,range(8))
     # for i in range(len(result_1)):
