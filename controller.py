@@ -1,3 +1,4 @@
+import math
 from view import cmd_line_view
 from model.Circuit import Circuit
 from model.simulations import ParticleInBoxSim
@@ -81,7 +82,7 @@ class Controller:
         :raises Exception: If the backend name chosen is unknown
         """
 
-        parameters = ['Size of Box', 'Eigenstate/Energy Level', 'Time Step Size', 'Number of time steps']
+        parameters = ['Size of Box', 'Eigenstate/Energy Level', 'Time Step Size', 'Number of time steps','Optimised(y/n)']
         params, backend = self.view.problem_input_page(parameters, "Particle In a Box Simulation", self.backend_options)
 
         ## Check values are not empty
@@ -95,18 +96,22 @@ class Controller:
         box_length = None
         num_iters = None
         energy_lvl = None
+        optimised = None
+
         ## Input Validation
         try:
             box_length = int(params['Size of Box'])
-            if (box_length & (box_length - 1)) == 0 and box_length != 0:
-                self.view.display_temp_msg("A Box length of " + str(box_length) + "is not a power of 2")
-                time.sleep(2)
-                self.menu()    
-                return        
+            
         except:
-            self.view.display_temp_msg("Size of Box must be an integer and be a power 2. Suggest not going above 32 if simulating, as this will be a 7 qubit simulation.")
-            time.sleep(3)
+            self.view.display_temp_msg("Size of Box must be an integer and be a power 2.")
+            time.sleep(2)
             self.menu()
+        
+        if not (math.log(box_length)/math.log(2)).is_integer():
+            self.view.display_temp_msg("A Box length of " + str(box_length) + " is not a power of 2")
+            time.sleep(2)
+            self.menu()    
+            return        
         
         try:
             time_step_size = float(params['Time Step Size'])          
@@ -128,8 +133,20 @@ class Controller:
             self.view.display_temp_msg("Energy Level must be an integer.")
             time.sleep(1)
             self.menu()    
-    
-        print(params)
+
+        try:
+            if params['Optimised(y/n)'].strip() == "y":
+                optimised = True
+            elif params['Optimised(y/n)'].strip() == "n":
+                optimised = False
+            else: 
+                self.view.display_temp_msg("Optimised must be a string of either y or n. Not " + str(params['Optimised(y/n)']))
+                time.sleep(1)
+                self.menu()
+        except:
+            self.view.display_temp_msg("Optimised must be a string of either y or n")
+            time.sleep(1)
+            self.menu()
 
         self.view.waiting_page("Building Circuit...")
 
@@ -152,7 +169,7 @@ class Controller:
                     else:
                         self.qvm = QVM_cirq()
                  
-                self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit)
+                self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit,optimised)
             case "qiskit-QVM":
                 if self.qvm == None:
                     if self.config != None:
@@ -160,14 +177,14 @@ class Controller:
                     else:
                         self.qvm = QVM_qiskit()
                 
-                self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit)
+                self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit,optimised)
             case "IBM-Q":
                 self.submit_IBMQ_job(particle_in_box_circuit,initial_state_circuit)
             case _:
                 raise Exception("Unknown backend name: " +  backend)
                       
    
-    def run_QVM_job(self, QVM:QVM, circuit:Circuit, initial_state:Circuit):
+    def run_QVM_job(self, QVM:QVM, circuit:Circuit, initial_state:Circuit,optimised:bool):
         """ Runs a circuit on a quantum virtual machine backend.
 
         :param QVM: The QVM to run the circuit on .
@@ -179,11 +196,11 @@ class Controller:
         """
         self.view.waiting_page("Simulating...")
 
-        results = QVM.run_circuit(circuit,False)
+        results = QVM.run_circuit(circuit,optimised)
 
-        initial_state = QVM.run_circuit(initial_state,False)
+        initial_state = QVM.run_circuit(initial_state,optimised)
 
-        for i in range(2 ** circuit.num_qubits):
+        for i in range(2 ** (circuit.num_qubits-1)):
             count = results.get(bin(i)[2:])
             if count == None:
                 results.update({i:0})
@@ -198,15 +215,24 @@ class Controller:
                 initial_state.pop(bin(i)[2:],None)
                 initial_state.update({i:initial_count})
         
+        box_len = ((2 ** (circuit.num_qubits-1)) / 2) - 0.5
         fig, ax = plt.subplots(nrows = 1, ncols = 2)
         ax[0].bar(initial_state.keys(),initial_state.values())
+        ax[0].axvline(box_len,color='b',label='Box end')
         ax[0].title.set_text("Initial State")
+        ax[0].legend()
 
         ax[1].bar(results.keys(),results.values())
-        ax[1].title.set_text("Initial State")
+        ax[1].axvline(box_len,color='b',label='Box end')
+
+        ax[1].title.set_text("Resulting state")
+        ax[1].legend()
         
-        #TODO: wht plt not showing
         plt.show()
+
+        # TODO: add option to save results
+
+        self.menu()
     
     def submit_IBMQ_job(self, circuit:Circuit, initial_state:Circuit):
         """ SUbmits a circuit to run on the IBM Quantum platform.
