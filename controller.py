@@ -17,7 +17,10 @@ class Controller:
     view = None
     config = None
 
-    menu_options = ["Particle In a Box", "Load Configuration File", "Check IBM Job Status" "Exit"]
+    qvm = None
+    ibmq_interface = None
+
+    menu_options = ["Particle In a Box", "Load Configuration File", "Check IBM Job Status", "Exit"]
 
     backend_options = ["cirq-QVM", "qiskit-QVM", "IBM-Q"]
 
@@ -28,6 +31,9 @@ class Controller:
         self.menu()
 
     def menu(self):
+        """ Creates a menu page using the view and sends the view the menu options for the user to choose from. 
+        """
+
         option_index = self.view.menu_page(self.menu_options)
 
         match self.menu_options[option_index]:
@@ -42,6 +48,9 @@ class Controller:
                 exit()
             
     def get_config_file(self):
+        """ Gets the configuration file from the user and parses it into a dictionary. 
+        """
+
         ## Get absolute location of file from user
         path = self.view.get_config_filepath()
 
@@ -50,6 +59,13 @@ class Controller:
             config_file = open(path[:-2],'r')
             self.config = yaml.safe_load(config_file)
             msg = "Config file successfully loaded."
+
+            if self.qvm != None:
+                self.qvm.update_config(self.config)
+            
+            if self.ibmq_interface != None:
+                self.ibmq_interface.set_up_config(self.config)
+
         except:
             msg = "ERROR: Loading configuration file failed. Check path spelling."
 
@@ -60,13 +76,20 @@ class Controller:
         self.menu()
 
     def particle_in_box(self):
+        """ Runs the particle in a box problem, sends the names of the parameters required to the view to have the user submit the values. 
+
+        :raises Exception: If the backend name chosen is unknown
+        """
+
         parameters = ['Size of Box', 'Eigenstate/Energy Level', 'Time Step Size', 'Number of time steps']
         params, backend = self.view.problem_input_page(parameters, "Particle In a Box Simulation", self.backend_options)
 
         ## Check values are not empty
         if params == None or list(params.values()).count(None) > 0:
             self.view.display_temp_msg("All parameters must be filled before submitting.")
+            time.sleep(1)
             self.menu()
+            return
 
         time_step_size = None
         box_length = None
@@ -75,32 +98,40 @@ class Controller:
         ## Input Validation
         try:
             box_length = int(params['Size of Box'])
-            if (box_length & (box_length - 1) == 0 ) and box_length != 0:
-                self.view.display_temp_msg("Box length must be a power of 2")
-                self.menu()            
+            if (box_length & (box_length - 1)) == 0 and box_length != 0:
+                self.view.display_temp_msg("A Box length of " + str(box_length) + "is not a power of 2")
+                time.sleep(2)
+                self.menu()    
+                return        
         except:
             self.view.display_temp_msg("Size of Box must be an integer and be a power 2. Suggest not going above 32 if simulating, as this will be a 7 qubit simulation.")
+            time.sleep(3)
             self.menu()
         
         try:
             time_step_size = float(params['Time Step Size'])          
         except:
             self.view.display_temp_msg("Time step size must be an integer or float.")
+            time.sleep(1)
             self.menu()
         
         try:
             num_iters = int(params['Number of time steps'])          
         except:
             self.view.display_temp_msg("Number of time-steps must be an integer")
+            time.sleep(1)
             self.menu()
         
         try:
             energy_lvl = int(params['Eigenstate/Energy Level'])
         except:
             self.view.display_temp_msg("Energy Level must be an integer.")
+            time.sleep(1)
             self.menu()    
     
         print(params)
+
+        self.view.waiting_page("Building Circuit...")
 
         ## Build circuit
         circuit_name = 'particle_in_box_e' + str(energy_lvl) + "_q" + str(np.log(box_length) + 2)
@@ -111,22 +142,25 @@ class Controller:
         particle_in_box_circuit.set_cirq_circuit(circuit)  
         initial_state_circuit.set_cirq_circuit(initial_circuit)
 
+
         ## Set up for a particular backend
         match backend:
             case "cirq-QVM":
-                if self.config != None:
-                    virtual_machine = QVM_cirq(config=self.config['cirq-QVM'])
-                else:
-                    virtual_machine = QVM_cirq()
-                
-                self.run_QVM_job(virtual_machine,particle_in_box_circuit,initial_state_circuit)
+                if self.qvm == None:
+                    if self.config != None:
+                        self.qvm = QVM_cirq(config=self.config['cirq-QVM'])
+                    else:
+                        self.qvm = QVM_cirq()
+                 
+                self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit)
             case "qiskit-QVM":
-                if self.config != None:
-                    virtual_machine = QVM_qiskit(config=self.config['qiskit-qvm'])
-                else:
-                    virtual_machine = QVM_qiskit()
+                if self.qvm == None:
+                    if self.config != None:
+                        self.qvm = QVM_qiskit(config=self.config['qiskit-qvm'])
+                    else:
+                        self.qvm = QVM_qiskit()
                 
-                self.run_QVM_job(virtual_machine,particle_in_box_circuit,initial_state_circuit)
+                self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit)
             case "IBM-Q":
                 self.submit_IBMQ_job(particle_in_box_circuit,initial_state_circuit)
             case _:
@@ -134,20 +168,30 @@ class Controller:
                       
    
     def run_QVM_job(self, QVM:QVM, circuit:Circuit, initial_state:Circuit):
+        """ Runs a circuit on a quantum virtual machine backend.
+
+        :param QVM: The QVM to run the circuit on .
+        :type QVM: QVM
+        :param circuit: The circuit in question
+        :type circuit: Circuit
+        :param initial_state: The initial state of the circuit, after the state preparation algorithm had been applied.
+        :type initial_state: Circuit
+        """
+        self.view.waiting_page("Simulating...")
 
         results = QVM.run_circuit(circuit,False)
 
         initial_state = QVM.run_circuit(initial_state,False)
 
         for i in range(2 ** circuit.num_qubits):
-            count = results.get()
+            count = results.get(bin(i)[2:])
             if count == None:
                 results.update({i:0})
             else:
                 results.pop(bin(i)[2:],None)
                 results.update({i:count})
             
-            initial_count = initial_state.get()
+            initial_count = initial_state.get(bin(i)[2:])
             if initial_count == None:
                 initial_state.update({i:0})
             else:
@@ -165,19 +209,33 @@ class Controller:
         plt.show()
     
     def submit_IBMQ_job(self, circuit:Circuit, initial_state:Circuit):
-        ## Get IBM-Q API Token
+        """ SUbmits a circuit to run on the IBM Quantum platform.
 
-        try:
-            if self.config != None:
-                ibm_interface = IBM_Q(token,self.config)
-            else:
-                ibm_interface = IBM_Q(token)
-        except:
-            self.view.display_temp_msg("API Token failed. Check token and try again.")
+        :param circuit: The circuit to run.
+        :type circuit: Circuit
+        :param initial_state: The initial state of the circuit after state preparation has been applied.
+        :type initial_state: Circuit
+        """
+
+        ## TODO: Get IBM-Q API Token
+        token = None
+
+        if self.ibmq_interface == None:
+            try:
+                if self.config != None:
+                    self.ibmq_interface = IBM_Q(token,self.config)
+                else:
+                    self.ibmq_interface  = IBM_Q(token)
+            except:
+                self.view.display_temp_msg("API Token failed. Check token and try again.")
             
 
     def check_IBM_job_status(self):
-        #TODO: submit job to IBM
+        """ Checks and gets the status of a job set to an IBM-Q machine.
+        """
+
+        #TODO: Think about storing job ids and descriptions locally?
+    
         print("ibm")
 
 
