@@ -1,4 +1,5 @@
 import math
+import os
 from view import cmd_line_view
 from model.Circuit import Circuit
 from model.simulations import ParticleInBoxSim
@@ -8,6 +9,7 @@ from model.QVM_qiskit import QVM_qiskit
 from model.IBM_Q_interface import IBM_Q
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 import yaml
 import time
@@ -53,7 +55,7 @@ class Controller:
         """
 
         ## Get absolute location of file from user
-        path = self.view.get_config_filepath()
+        path = self.view.get_text_from_user("Enter path to configuration file:")
 
         ## Open file and save configuration.
         try:
@@ -179,7 +181,7 @@ class Controller:
                 
                 self.run_QVM_job(self.qvm,particle_in_box_circuit,initial_state_circuit,optimised)
             case "IBM-Q":
-                self.submit_IBMQ_job(particle_in_box_circuit,initial_state_circuit)
+                self.submit_IBMQ_job(particle_in_box_circuit,params)
             case _:
                 raise Exception("Unknown backend name: " +  backend)
                       
@@ -229,12 +231,10 @@ class Controller:
         ax[1].legend()
         
         plt.show()
-
-        # TODO: add option to save results
-
+        
         self.menu()
     
-    def submit_IBMQ_job(self, circuit:Circuit, initial_state:Circuit):
+    def submit_IBMQ_job(self, circuit:Circuit, params:dict):
         """ SUbmits a circuit to run on the IBM Quantum platform.
 
         :param circuit: The circuit to run.
@@ -243,18 +243,95 @@ class Controller:
         :type initial_state: Circuit
         """
 
-        ## TODO: Get IBM-Q API Token
-        token = None
+        token = self.view.get_text_from_user("Input API token for IBM-Q: ")
+        token = token.replace(" ","")
+        token = token.replace("\n","")
 
+        self.view.waiting_page("Connecting...")
+                                   
         if self.ibmq_interface == None:
             try:
                 if self.config != None:
-                    self.ibmq_interface = IBM_Q(token,self.config)
+                    self.ibmq_interface = IBM_Q(token.strip(),self.config)
                 else:
-                    self.ibmq_interface  = IBM_Q(token)
+                    self.ibmq_interface  = IBM_Q(token.strip())
             except:
                 self.view.display_temp_msg("API Token failed. Check token and try again.")
-            
+                time.sleep(10)
+                self.menu()
+        
+        self.view.waiting_page("Successfully connected to IBM-Q. Simulating expected results... ")
+
+        simulated_results, expected_results = self.ibmq_interface.verify_via_sim(circuit)
+
+        if simulated_results == None:
+            self.view.display_temp_msg("Simulation failed. Circuit is broken")
+            time.sleep(10)
+            self.menu()
+        
+        if expected_results == None:
+            self.view.display_temp_msg("Exact results failed. Circuit is broken")
+            time.sleep(10)
+            self.menu()
+        
+        print(expected_results)
+        print(simulated_results)
+
+        num_measures = circuit.num_qubits - 1
+
+        for i in range(2 ** num_measures):
+                bin_num = bin(i)[2:]
+
+                while len(bin_num) != len(bin((2 ** num_measures) -1)[2:]):
+                    bin_num = '0' + bin_num
+                
+                count = simulated_results.get(bin_num)
+                if count == None:
+                    simulated_results.update({i:0})
+                else:
+                    simulated_results.pop(bin_num,None)
+                    simulated_results.update({i:count})
+                
+                expected_count = expected_results.get(bin_num)
+                if expected_count == None:
+                    expected_results.update({i:0})
+                else:
+                    expected_results.pop(bin_num,None)
+                    expected_results.update({i:expected_count})
+
+        box_len = ((2 ** (circuit.num_qubits-1)) / 2) - 0.5
+        fig, ax = plt.subplots(nrows = 1, ncols = 2)
+        ax[0].bar(expected_results.keys(),expected_results.values())
+        ax[0].axvline(box_len,color='b',label='Box end')
+        ax[0].title.set_text("Exact expected results")
+        ax[0].legend()
+
+        ax[1].bar(simulated_results.keys(),simulated_results.values())
+        ax[1].axvline(box_len,color='b',label='Box end')
+
+        ax[1].title.set_text("Noisy simulated results")
+        ax[1].legend()
+        
+        plt.show()
+
+        if self.view.yes_no_question("Submit job to " + self.ibmq_interface.backend_name):
+            job_id = self.ibmq_interface.submit_job(circuit)
+
+            if job_id != None:
+                path = "./job_ids.yaml"
+
+                with open(path, 'w') as file:
+                    params.update({'date': datetime.now().strftime("%d/%m/%Y %H:%M:%S")})
+                    to_dump = {job_id:params}
+                    yaml.dump(to_dump,file,default_flow_style=False)
+                
+                self.view.display_temp_msg("Job successfully submitted. Job ID = " + str(job_id) + "\n Details saved in " + path)
+                time.sleep(5)
+            else: 
+                self.view.display_temp_msg("Job submission failed, please try again")
+                time.sleep(3)
+
+        self.menu()
 
     def check_IBM_job_status(self):
         """ Checks and gets the status of a job set to an IBM-Q machine.

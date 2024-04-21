@@ -147,10 +147,18 @@ class IBM_Q:
             
             result = job.result()[0].data.m_meas.get_counts()
 
+            simulator = AerSimulator()
+
+            circ = transpile(circuit.get_qiskit_circuit(),simulator)
+
+            sampler = Sampler(simulator)
+            job = sampler.run([circ],shots = self.num_repetitions)
+            
+            exact_result = job.result()[0].data.m_meas.get_counts()
         except:
             return None
         
-        return result
+        return result, exact_result
 
         
 
