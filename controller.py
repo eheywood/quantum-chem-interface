@@ -15,6 +15,8 @@ from  qiskit.providers import JobStatus
 import yaml
 import time
 
+# TODO: bug fix issues with config file and api token
+
 
 class Controller:
       
@@ -59,19 +61,21 @@ class Controller:
         path = self.view.get_text_from_user("Enter path to configuration file:")
 
         ## Open file and save configuration.
-        try:
-            config_file = open(path[:-2],'r')
-            self.config = yaml.safe_load(config_file)
-            msg = "Config file successfully loaded."
+        #try:
+        path = path.replace("\n","")
 
-            if self.qvm != None:
-                self.qvm.update_config(self.config)
-            
-            if self.ibmq_interface != None:
-                self.ibmq_interface.set_up_config(self.config)
+        config_file = open(path,'r')
+        self.config = yaml.safe_load(config_file)
+        msg = "Config file successfully loaded."
 
-        except:
-            msg = "ERROR: Loading configuration file failed. Check path spelling."
+        if self.qvm != None:
+            self.qvm.update_config(self.config)
+        
+        if self.ibmq_interface != None:
+            self.ibmq_interface.set_up_config(self.config)
+
+        #except:
+        msg = "ERROR: Loading configuration file failed. Could not find " + path
 
         ## Confirmation message
         self.view.display_temp_msg(msg)
@@ -168,7 +172,7 @@ class Controller:
             case "cirq-QVM":
                 if self.qvm == None:
                     if self.config != None:
-                        self.qvm = QVM_cirq(config=self.config['cirq-QVM'])
+                        self.qvm = QVM_cirq(config=self.config['cirq-qvm'])
                     else:
                         self.qvm = QVM_cirq()
                  
@@ -243,19 +247,20 @@ class Controller:
         :param initial_state: The initial state of the circuit after state preparation has been applied.
         :type initial_state: Circuit
         """
-
-        token = self.view.get_text_from_user("Input API token for IBM-Q: ")
-        token = token.replace(" ","")
-        token = token.replace("\n","")
-
-        self.view.waiting_page("Connecting...")
                                    
         if self.ibmq_interface == None:
+
+            token = self.view.get_text_from_user("Input API token for IBM-Q: ")
+            token = token.replace(" ","")
+            token = token.replace("\n","")
+
+            self.view.waiting_page("Connecting...")
+
             try:
                 if self.config != None:
-                    self.ibmq_interface = IBM_Q(token.strip(),self.config)
+                    self.ibmq_interface = IBM_Q(token,self.config)
                 else:
-                    self.ibmq_interface  = IBM_Q(token.strip())
+                    self.ibmq_interface  = IBM_Q(token)
             except:
                 self.view.display_temp_msg("API Token failed. Check token and try again.")
                 time.sleep(3)
@@ -322,9 +327,11 @@ class Controller:
                 path = "./job_ids.yaml"
 
                 with open(path, 'w') as file:
-                    params.update({'date': datetime.now().strftime("%d/%m/%Y %H:%M")})
-                    to_dump = {job_id:params}
-                    yaml.dump(to_dump,file,default_flow_style=False)
+                    cur_file = yaml.safe_load(file)
+                    params.update({'date': datetime.now().strftime("%d/%m/%Y %H:%M"),'backend':self.ibmq_interface.backend_name})
+                    cur_file.update({job_id:params})
+
+                    yaml.dump(cur_file,file,default_flow_style=False)
                 
                 self.view.display_temp_msg("Job successfully submitted. Job ID = " + str(job_id) + "\n Details saved in " + path)
                 time.sleep(5)
@@ -349,9 +356,9 @@ class Controller:
             if self.ibmq_interface == None:
                 try:
                     if self.config != None:
-                        self.ibmq_interface = IBM_Q(token.strip(),self.config)
+                        self.ibmq_interface = IBM_Q(token,self.config)
                     else:
-                        self.ibmq_interface  = IBM_Q(token.strip())
+                        self.ibmq_interface  = IBM_Q(token)
                 except:
                     self.view.display_temp_msg("API Token failed. Check token and try again.")
                     time.sleep(3)
@@ -359,7 +366,6 @@ class Controller:
         
         ## Get list of jobs from yaml file
         path = "./job_ids.yaml"
-        
         
         try:
             file = open(path,'r')
@@ -371,7 +377,7 @@ class Controller:
         
         job_strs = []
         for job,details in job_ids.items():
-            details = job + ' -> ' + details['date'] + " L: " + details['Size of Box'] + " energy level: " + details['Eigenstate/Energy Level'] + " time step: " + details['Time Step Size'] + "x " + details['Number of time steps']
+            details = job + ' -> ' + details['date'] + " backend: " + details['backend'] + " L: " + details['Size of Box'] + " energy level: " + details['Eigenstate/Energy Level'] + " time step: " + details['Time Step Size'] + "x " + details['Number of time steps']
             job_strs.append(details)
 
         option = self.view.options_page(job_strs, "Job ID's")        
