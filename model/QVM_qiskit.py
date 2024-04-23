@@ -2,12 +2,13 @@
 from qiskit_aer.noise import NoiseModel
 from qiskit import QuantumCircuit, transpile
 from qiskit.providers import fake_provider 
+from qiskit_ibm_runtime.fake_provider import FakeBrisbane,FakeSherbrooke,FakeKyoto,FakeOsaka
 from qiskit_aer import AerSimulator
 from model import QVM,Circuit
 class QVM_qiskit(QVM.QVM):
 
     ## See https://docs.quantum.ibm.com/api/qiskit/providers_fake_provider for other examples of fake backends. 
-    noisy = True
+    noisy = False
 
     backend = fake_provider.Fake20QV1()
     noise_model = None
@@ -25,7 +26,6 @@ class QVM_qiskit(QVM.QVM):
             self.update_config(config)
         else: 
             self.construct_default_QVM()
-    
 
     def toggle_noise(self):
         """ Toggles the noisy boolean. Turns the noise in the QVM on or off
@@ -116,18 +116,16 @@ class QVM_qiskit(QVM.QVM):
                     raise AttributeError(setting + " is not a known key within the configuration file.")
         
         ## Sets the backend to the specified one according to the name
-        if  not default_backend:
+        if not default_backend:
             match value:
-                case 'fake_127q_pulse_v1':
-                    self.backend = fake_provider.Fake127QPulseV1()
-                case 'fake_20q_v1':
-                    self.backend = fake_provider.Fake20QV1()
-                case 'fake_27q_pulse_v1':
-                    self.backend = fake_provider.Fake27QPulseV1()
-                case 'fake_5q_v1':
-                    self.backend = fake_provider.Fake5QV1()
-                case 'fake_7q_pulse_v1':
-                    self.backend = fake_provider.Fake7QPulseV1()
+                case 'ibm_sherbrooke':
+                    self.backend = FakeSherbrooke()
+                case 'ibm_brisbane':
+                    self.backend = FakeBrisbane()
+                case 'ibm_osaka':
+                    self.backend = FakeOsaka()
+                case 'ibm_kyoto':
+                    self.backend = FakeKyoto()
                 case _:
                     raise AttributeError(value + " is an unknown fake backend. See https://docs.quantum.ibm.com/api/qiskit/providers_fake_provider for options")
 
