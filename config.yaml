@@ -2,17 +2,17 @@
 # Settings for the cirq qvm
 cirq-qvm:
   processor_id: "weber" # weber or rainbow
-  noise_on: False
+  noise_on: True
   repetitions : 1000
   noise_model: "default" # or custom. If custom will need to update the QVM with this prior to running a circuit
   device: "default" # same as noise_model
 # Settings for the qiskit-qvm
 qiskit-qvm:
-  noise_on: False
+  noise_on: True
   repetitions : 1000
   noise_model: "default" # or custom. If custom will need to update the QVM with this prior to running a circuit
-  backend_name: 'fake_127q_pulse_v1' # same as noise_model
+  backend_name: 'ibm_brisbane' # same as noise_model
 # Settings for IBM-Q Interface
 IBM-Q:
-  backend_name: "ibm-brisbane"
+  backend_name: "ibm_sherbrooke"
   optimisation_lvl: 1

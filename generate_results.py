@@ -9,6 +9,8 @@ import matplotlib
 import numpy as np
 from qiskit_ibm_runtime import QiskitRuntimeService
 
+plt.switch_backend('agg')
+
 # TODO: re reun results for correct results
 
 def main():
@@ -52,6 +54,7 @@ def main():
             circuit_name = backend + "_particle_L" + str(L) + "_e" + str(energy_lvl) + "_i" + str(num_iters)
             particleCircuit = Circuit(circuit_name)
             particleCircuit.set_cirq_circuit(particle_circuit)
+            #print(type(particleCircuit.get_qiskit_circuit()))
 
             initial_name = backend +  "_initial_L" + str(L) + "_e" + str(energy_lvl)
             Circuit_initial = Circuit(initial_name)
@@ -141,108 +144,147 @@ def main():
             ax.bar(noisy_result1.keys(),noisy_result1.values())
             ax.set_xlabel("State")
             ax.set_ylabel("Counts")
-            plt.savefig("./results/results_cirq_noise/" + circuit_name)
+            ax.axvline(L-0.5,color='r',label='Box end')
+            ax.legend()
+            plt.savefig("./results/results_" + backend + "_noise/" + circuit_name)
+            plt.close()
 
             fig1,ax1 = plt.subplots()
             ax1.bar(noisy_result2.keys(),noisy_result2.values())
             ax1.set_xlabel("State")
             ax1.set_ylabel("Counts")
-            plt.savefig("./results/results_cirq_noise/" + initial_name)
+            ax1.axvline(L-0.5,color='r',label='Box end')
+            ax1.legend()
+            plt.savefig("./results/results_" + backend + "_noise/" + initial_name)
+            plt.close()
 
             fig,ax = plt.subplots()
             ax.bar(exact_result1.keys(),exact_result1.values())
             ax.set_xlabel("State")
             ax.set_ylabel("Counts")
-            plt.savefig("./results/results_cirq_no_noise/" + circuit_name)
+            ax.axvline(L-0.5,color='r',label='Box end')
+            ax.legend()
+            plt.savefig("./results/results_" + backend + "_no_noise/" + circuit_name)
+            plt.close()
 
             fig1,ax1 = plt.subplots()
             ax1.bar(exact_result2.keys(),exact_result2.values())
+            ax1.axvline(L-0.5,color='r',label='Box end')
+
             ax1.set_xlabel("State")
             ax1.set_ylabel("Counts")
-            plt.savefig("./results/results_cirq_no_noise/" + initial_name)
+            ax1.legend()
+            plt.savefig("./results/results_" + backend + "_no_noise/" + initial_name)
+            plt.close()
 
             counter += 1
 
+        allMax = max(np.max(entire_amp_values),np.max(entire_amp_values_noisy))
+        allMin = min(np.min(entire_amp_values),np.min(entire_amp_values_noisy))
+
+        diffMax = max(np.max(diff_amp_values),np.max(diff_amp_values_noisy))
+        diffMin = min(np.min(diff_amp_values),np.min(diff_amp_values_noisy))
+
         fig,ax = plt.subplots(nrows=1,ncols=1)
-        im = ax.imshow(entire_amp_values, cmap='Greens')
+        im = ax.imshow(entire_amp_values, cmap='Greens',vmin=allMin,vmax=allMax)
         ax.set_xticks(np.arange(len(x_labels)), labels = x_labels)
         ax.set_yticks(np.arange(len(y_all_labels)), labels = y_all_labels)
+        if L == 16:
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="left",
+             rotation_mode="anchor")
         cbar = ax.figure.colorbar(im, ax = ax,orientation='horizontal')
         cbar.set_label("Amplitude")
-        ax.set_ylabel("Number of iterations")
+        ax.set_ylabel("Iterations")
         ax.set_xlabel("State")
 
-        for i in range(len(x_labels)):
-            for j in range(len(y_all_labels)):
-                print(j,i,entire_amp_values[j,i])
-                text = im.axes.text(i,j, round(entire_amp_values[j, i], 3),
-                            ha = "center", va = "center", color = "w")
+        if L == 4:
+            for i in range(len(x_labels)):
+                for j in range(len(y_all_labels)):
+                    print(j,i,entire_amp_values[j,i])
+                    text = im.axes.text(i,j, round(entire_amp_values[j, i], 2),
+                                ha = "center", va = "center", color = "w")
 
         plt.title("L:" + str(L) + " exact simulation amplitudes")
         file_name = "L" + str(L) + "_amplitudes_table"
-        plt.savefig("./results/results_cirq_no_noise/" + file_name)
+        plt.savefig("./results/results_" + backend + "_no_noise/" + file_name)
+        plt.close()
 
         fig,ax = plt.subplots(nrows=1,ncols=1)
-        im = ax.imshow(entire_amp_values_noisy, cmap='Greens')
+        im = ax.imshow(entire_amp_values_noisy, cmap='Greens',vmin=allMin,vmax=allMax)
         ax.set_xticks(np.arange(len(x_labels)), labels = x_labels)
         ax.set_yticks(np.arange(len(y_all_noise_labels)), labels = y_all_noise_labels)
+        if L == 16:
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="left",
+             rotation_mode="anchor")
         cbar = ax.figure.colorbar(im, ax = ax,orientation='horizontal')
         cbar.set_label("Amplitude")
-        ax.set_ylabel("Number of iterations")
+        ax.set_ylabel("Iterations")
         ax.set_xlabel("State")
 
-
-        for i in range(len(x_labels)):
-            for j in range(len(y_all_noise_labels)):
-                print(j,i,entire_amp_values_noisy[j,i])
-                text = im.axes.text(i,j, round(entire_amp_values_noisy[j, i], 3),
-                            ha = "center", va = "center", color = "w")
+        if L == 4:
+            for i in range(len(x_labels)):
+                for j in range(len(y_all_noise_labels)):
+                    print(j,i,entire_amp_values_noisy[j,i])
+                    text = im.axes.text(i,j, round(entire_amp_values_noisy[j, i], 2),
+                                ha = "center", va = "center", color = "w")
                 
         plt.title("L:" + str(L) + " noisy simulation amplitudes")
         file_name = "L" + str(L) + "_amplitudes_table"
-        plt.savefig("./results/results_cirq_noise/" + file_name)
+        plt.savefig("./results/results_"+ backend + "_noise/" + file_name)
+        plt.close()
 
 
         fig,ax = plt.subplots(nrows=1,ncols=1)
-        im2 = ax.imshow(diff_amp_values, cmap='RdBu')
+        im2 = ax.imshow(diff_amp_values, cmap='RdBu',vmin=diffMin,vmax=diffMax)
         ax.set_xticks(np.arange(len(x_labels)), labels = x_labels)
         ax.set_yticks(np.arange(len(y_diff_labels)), labels = y_diff_labels)
+        if L == 16:
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="left",
+             rotation_mode="anchor")
         cbar = ax.figure.colorbar(im2, ax = ax,orientation='horizontal')
         cbar.set_label("Difference to expected amplitude")
-        ax.set_ylabel("Number of iterations")
+        ax.set_ylabel("Iterations")
         ax.set_xlabel("State")
 
-
-        for i in range(len(x_labels)):
-            for j in range(len(y_diff_labels)):
-                print(j,i,diff_amp_values[j,i])
-                text = im2.axes.text(i, j, round(diff_amp_values[j, i], 3),
-                            ha = "center", va = "center", color = "w")
+        if L == 4:
+            for i in range(len(x_labels)):
+                for j in range(len(y_diff_labels)):
+                    print(j,i,diff_amp_values[j,i])
+                    text = im2.axes.text(i, j, round(diff_amp_values[j, i], 2),
+                                ha = "center", va = "center", color = "w")
         
         plt.title("L:" + str(L) + " exact simulation differences")
         file_name = "L" + str(L) + "_differences_table"
-        plt.savefig("./results/results_cirq_no_noise/" + file_name)
+        plt.savefig("./results/results_" + backend + "_no_noise/" + file_name)
+        plt.close()
 
         fig,ax = plt.subplots(nrows=1,ncols=1)
-        im2 = ax.imshow(diff_amp_values_noisy, cmap='RdBu')
+        im2 = ax.imshow(diff_amp_values_noisy, cmap='RdBu',vmin=diffMin,vmax=diffMax)
         ax.set_xticks(np.arange(len(x_labels)), labels = x_labels)
         ax.set_yticks(np.arange(len(y_diff_noise_labels)), labels = y_diff_noise_labels)
+        
         cbar = ax.figure.colorbar(im2, ax = ax,orientation='horizontal')
         cbar.set_label("Difference to expected amplitude",)
-        ax.set_ylabel("Number of iterations")
+        ax.set_ylabel("Iterations")
         ax.set_xlabel("State")
 
-
-        for i in range(len(x_labels)):
-            for j in range(len(y_diff_noise_labels)):
-                print(j,i,diff_amp_values_noisy[j,i])
-                text = im2.axes.text(i, j, round(diff_amp_values_noisy[j, i], 3),
-                            ha = "center", va = "center", color = "w")
+        if L == 4:
+            for i in range(len(x_labels)):
+                for j in range(len(y_diff_noise_labels)):
+                    print(j,i,diff_amp_values_noisy[j,i])
+                    text = im2.axes.text(i, j, round(diff_amp_values_noisy[j, i], 2),
+                                ha = "center", va = "center", color = "w")
+        
+        if L == 16:
+            plt.setp(ax.get_xticklabels(), rotation=45, ha="left",
+             rotation_mode="anchor")
+            
         plt.title("L:" + str(L) + " noisy simulation differences")
         file_name = "L" + str(L) + "_differences_table"
-        plt.savefig("./results/results_cirq_noise/" + file_name)
+        plt.savefig("./results/results_"+ backend + "_noise/" + file_name)
+        plt.close()
         
-        plt.show()
+        #plt.show()
 
 # plt.show()
 
@@ -252,15 +294,15 @@ def submit_IBMQ_job():
     L = 32
     energy_lvl = 1
     time_step_size = 0.1
-    num_iters = 1
+    num_iters = 10
     #noisy = "noise"
     backend = 'IBMQ'
 
     config_file = open('config.yaml','r')
-    config = yaml.safe_load(config_file)
+    config_dict = yaml.safe_load(config_file)
 
-    token_str = "fc5d547283354d8a12af2179141f8ea4089cdca5fac9ad1cc89eacc03acab823664cdcc31b436a4f7c98a2f7aa11ae341989a55acf6a60d64e4439a4a89ad092"
-    qm = IBM_Q(token=token_str, config=config)
+    token_str = "217c42c6b33fe1b4f02a9ab802a2a39653cec0965dff45bd0555f768ae32f69eeccfd4bee5e4c4900746b1510043e68d36b39db6b5e10b792ad80945a2a6d8eb"
+    qm = IBM_Q(token_str, config=config_dict['IBM-Q'])
     
     particle_circuit, initial_state_circuit  = build_circuit(L,energy_lvl,time_step_size,num_iters,'qiskit-QVM')
 
@@ -273,8 +315,7 @@ def submit_IBMQ_job():
     Circuit_initial.set_cirq_circuit(initial_state_circuit)
 
 
-    result1 = qm.verify_via_sim(particleCircuit)
-    print(result1)
+    result2,result1 = qm.verify_via_sim(particleCircuit)
 
     num_measures = int(np.log2(L) + 1)
 
@@ -291,34 +332,52 @@ def submit_IBMQ_job():
                 result1.pop(bin_num,None)
                 result1.update({i:count})
             
+            count2 = result2.get(bin_num)
+            if count2 == None:
+                result2.update({i:0})
+            else:
+                result2.pop(bin_num,None)
+                result2.update({i:count2})
+            
 
     print(result1)
+    print(result2)
 
     fig,ax = plt.subplots()
     ax.bar(result1.keys(),result1.values())
+    ax.axvline(L-0.5,color='b',label='Box end')
+
     ax.set_xlabel("State")
     ax.set_ylabel("Counts")
-    plt.savefig("./results/results_IBM_Q/" + circuit_name)
-
-    job_id = qm.submit_job(particleCircuit)
-    print(job_id)
-    status = qm.check_job_status(job_id)
-    print(status)
+    plt.savefig("./results/results_IBM_Q/" + circuit_name + "exact_sim")
 
 
-if __name__ == '__main__':
-	main()
+    fig,ax = plt.subplots()
+    ax.bar(result2.keys(),result2.values())
+    ax.axvline(L-0.5,color='b',label='Box end')
+
+    ax.set_xlabel("State")
+    ax.set_ylabel("Counts")
+    plt.savefig("./results/results_IBM_Q/" + circuit_name + "noisy_sim")
+
+    plt.show()
+
+    choice = str(input("send to ibmq?"))
+
+    if choice == 'y':
+        job_id = qm.submit_job(particleCircuit)
+        print(job_id)
+        status = qm.check_job_status(job_id)
+        print(status)
+
  
-    #submit_IBMQ_job()
- 
-    #config_file = open('config.yaml','r')
-    #config = yaml.safe_load(config_file)
 
 def IBM_Q_Get_results():
-    token_str = "fc5d547283354d8a12af2179141f8ea4089cdca5fac9ad1cc89eacc03acab823664cdcc31b436a4f7c98a2f7aa11ae341989a55acf6a60d64e4439a4a89ad092"
+    token_str = "217c42c6b33fe1b4f02a9ab802a2a39653cec0965dff45bd0555f768ae32f69eeccfd4bee5e4c4900746b1510043e68d36b39db6b5e10b792ad80945a2a6d8eb"
+
 
     qm = IBM_Q(token=token_str)
-    job_id = 'crftgha7fdh0008f92t0'
+    job_id = 'crkpgvkakhw0008ewztg'
 
     #service = QiskitRuntimeService(channel='ibm_quantum',instance='ibm-q/open/main',token=token_str)
     
@@ -348,7 +407,10 @@ def IBM_Q_Get_results():
     circuit_name = 'IBMQ_particle_L32_e1_i10'
     fig,ax = plt.subplots()
     ax.bar(result1.keys(),result1.values())
+    ax.axvline(32-0.5,color='b',label='Box end')
     ax.set_xlabel("State")
     ax.set_ylabel("Counts")
     plt.savefig("./results/results_IBM_Q/" + circuit_name)
 
+if __name__ == '__main__':
+	IBM_Q_Get_results()
