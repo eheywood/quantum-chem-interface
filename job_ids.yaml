@@ -52,3 +52,11 @@ crkpgvkakhw0008ewztg:
   Time Step Size: '0.1 '
   date: '23/04/2024 9:03'
   backend: 'ibm_sherbrooke'
+crqry0813ehg008r3ypg:
+  Eigenstate/Energy Level: '1 '
+  Number of time steps: '1 '
+  Optimised(y/n): 'y '
+  Size of Box: '8 '
+  Time Step Size: '0.1 '
+  backend: ibm_brisbane
+  date: 29/04/2024 13:13

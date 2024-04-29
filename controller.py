@@ -2,7 +2,7 @@ import math
 import os
 from view import cmd_line_view
 from model.Circuit import Circuit
-from model.simulations import ParticleInBoxSim
+from model.simulations import particle_box_sim
 from model.QVM import QVM
 from model.QVM_cirq import QVM_cirq
 from model.QVM_qiskit import QVM_qiskit
@@ -61,21 +61,22 @@ class Controller:
         path = self.view.get_text_from_user("Enter path to configuration file:")
 
         ## Open file and save configuration.
-        #try:
-        path = path.replace("\n","")
+        try:
+            path = path.replace("\n","")
+            path = path.strip()
 
-        config_file = open(path,'r')
-        self.config = yaml.safe_load(config_file)
-        msg = "Config file successfully loaded."
+            config_file = open(path,'r')
+            self.config = yaml.safe_load(config_file)
+            msg = "Config file successfully loaded."
 
-        if self.qvm != None:
-            self.qvm.update_config(self.config)
-        
-        if self.ibmq_interface != None:
-            self.ibmq_interface.set_up_config(self.config)
+            if self.qvm != None:
+                self.qvm.update_config(self.config)
+            
+            if self.ibmq_interface != None:
+                self.ibmq_interface.set_up_config(self.config)
 
-        #except:
-        msg = "ERROR: Loading configuration file failed. Could not find " + path
+        except:
+            msg = "ERROR: Loading configuration file failed. Could not find " + path
 
         ## Confirmation message
         self.view.display_temp_msg(msg)
@@ -90,7 +91,8 @@ class Controller:
         """
 
         parameters = ['Size of Box', 'Eigenstate/Energy Level', 'Time Step Size', 'Number of time steps','Optimised(y/n)']
-        params, backend = self.view.problem_input_page(parameters, "Particle In a Box Simulation", self.backend_options)
+        note = "Note that the number of qubits required for simulation will be log(L) + 2 where L is the size of box."
+        params, backend = self.view.problem_input_page(parameters, "Particle In a Box Simulation", self.backend_options,note=note)
 
         ## Check values are not empty
         if params == None or list(params.values()).count(None) > 0:
@@ -162,7 +164,7 @@ class Controller:
         initial_name = 'initial_state_circuit_e' + str(energy_lvl) + "_q" + str(np.log(box_length))
         particle_in_box_circuit = Circuit(circuit_name)
         initial_state_circuit = Circuit(initial_name)
-        circuit, initial_circuit = ParticleInBoxSim.build_circuit(box_length,energy_lvl,time_step_size,num_iters, backend)
+        circuit, initial_circuit = particle_box_sim.build_circuit(box_length,energy_lvl,time_step_size,num_iters, backend)
         particle_in_box_circuit.set_cirq_circuit(circuit)  
         initial_state_circuit.set_cirq_circuit(initial_circuit)
 
@@ -256,15 +258,15 @@ class Controller:
 
             self.view.waiting_page("Connecting...")
 
-            try:
-                if self.config != None:
-                    self.ibmq_interface = IBM_Q(token,self.config)
-                else:
-                    self.ibmq_interface  = IBM_Q(token)
-            except:
-                self.view.display_temp_msg("API Token failed. Check token and try again.")
-                time.sleep(3)
-                self.menu()
+            #try:
+            if self.config != None:
+                self.ibmq_interface = IBM_Q(token,self.config['IBM-Q'])
+            else:
+                self.ibmq_interface  = IBM_Q(token)
+            # except:
+            #     self.view.display_temp_msg("API Token failed. Check token and try again.")
+            #     time.sleep(3)
+            #     self.menu()
         
         self.view.waiting_page("Successfully connected to IBM-Q. Simulating expected results... ")
 
@@ -279,9 +281,6 @@ class Controller:
             self.view.display_temp_msg("Exact results failed. Circuit is broken")
             time.sleep(3)
             self.menu()
-        
-        print(expected_results)
-        print(simulated_results)
 
         num_measures = circuit.num_qubits - 1
 
@@ -320,18 +319,19 @@ class Controller:
         
         plt.show()
 
-        if self.view.yes_no_question("Submit job to " + self.ibmq_interface.backend_name):
+        submit = self.view.yes_no_question("Submit job to " + self.ibmq_interface.backend_name)
+        if submit:
+            self.view.waiting_page("Submitting...")
             job_id = self.ibmq_interface.submit_job(circuit)
 
             if job_id != None:
                 path = "./job_ids.yaml"
 
-                with open(path, 'w') as file:
+                with open(path, 'a+') as file:
                     cur_file = yaml.safe_load(file)
                     params.update({'date': datetime.now().strftime("%d/%m/%Y %H:%M"),'backend':self.ibmq_interface.backend_name})
-                    cur_file.update({job_id:params})
-
-                    yaml.dump(cur_file,file,default_flow_style=False)
+                    file.write('\n\n')
+                    yaml.dump({job_id:params},file,default_flow_style=False)
                 
                 self.view.display_temp_msg("Job successfully submitted. Job ID = " + str(job_id) + "\n Details saved in " + path)
                 time.sleep(5)
@@ -356,7 +356,7 @@ class Controller:
             if self.ibmq_interface == None:
                 try:
                     if self.config != None:
-                        self.ibmq_interface = IBM_Q(token,self.config)
+                        self.ibmq_interface = IBM_Q(token,self.config['IBM-Q'])
                     else:
                         self.ibmq_interface  = IBM_Q(token)
                 except:

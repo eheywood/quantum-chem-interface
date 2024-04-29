@@ -1,6 +1,6 @@
 ## QVM provided by Qiskit
 from qiskit_aer.noise import NoiseModel
-from qiskit import QuantumCircuit, transpile
+from qiskit import transpile
 from qiskit.providers import fake_provider 
 from qiskit_ibm_runtime.fake_provider import FakeBrisbane,FakeSherbrooke,FakeKyoto,FakeOsaka
 from qiskit_aer import AerSimulator
@@ -130,8 +130,6 @@ class QVM_qiskit(QVM.QVM):
                     raise AttributeError(value + " is an unknown fake backend. See https://docs.quantum.ibm.com/api/qiskit/providers_fake_provider for options")
 
         self.__backend_update()
-        
-            
         
 
     def run_circuit(self, circuit: Circuit,optimised:bool):

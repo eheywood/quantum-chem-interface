@@ -1,4 +1,4 @@
-from model.simulations.ParticleInBoxSim import build_circuit
+from model.simulations.particle_box_sim import build_circuit
 from model.Circuit import Circuit
 from model.QVM_cirq import QVM_cirq
 from model.QVM_qiskit import QVM_qiskit

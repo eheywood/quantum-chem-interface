@@ -50,7 +50,6 @@ class IBM_Q:
 
             match setting:
                 case 'backend_name':
-                    print(value)
                     self.backend_name = value
                 case 'optimisation_lvl':
                     self.optimisation_lvl = value

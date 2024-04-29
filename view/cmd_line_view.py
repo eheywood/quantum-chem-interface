@@ -105,7 +105,7 @@ class CMD_line_interface:
         curses.endwin()
     
    
-    def problem_input_page(self,parameter_names:list,page_title:str, backend_options:list) -> dict:
+    def problem_input_page(self,parameter_names:list,page_title:str, backend_options:list, note=None) -> dict:
         """ A generic method to display a page of required parameters and return the results inputted by the user.
 
         :param parameter_names: The names/ descriptions of the required parameters
@@ -133,13 +133,19 @@ class CMD_line_interface:
 
         choice = 0
         backend_index = 0
+        note = "-> " + note
 
         while True:
             x_pos = 1
             y_pos = 5
 
             self.stdscr.addstr(1,1,page_title, curses.A_UNDERLINE)
-            self.stdscr.addstr(3,1,"CTRL-G to finish typing or q to go back to menu", curses.A_ITALIC)
+            self.stdscr.addstr(3,1,"-> CTRL-G to finish typing or q to go back to menu", curses.A_ITALIC)
+            
+            if note != None:
+                self.stdscr.addstr(4,1,note, curses.A_ITALIC)
+                y_pos += 1
+
 
             for i in range(len(backend_options)):
                 if backend_index == i:
@@ -218,18 +224,35 @@ class CMD_line_interface:
         :type question: str
         :return: True if yes, False if no.
         :rtype: _type_
-        """
-        
-        msg = question + " (y/n): "
+        """ 
+        msg = question
         self.stdscr.clear()
 
         self.stdscr.addstr(1,1,msg)
+        
+        choice = 0
+        choices = ['yes', 'no']
+        while True:
+            x_pos = 1
+            for i in range(len(choices)):
+                if i == choice:
+                    self.stdscr.addstr(3,x_pos,choices[i], curses.A_REVERSE)
+                else:
+                    self.stdscr.addstr(3,x_pos,choices[i])
+                x_pos += 6
+            
+            c = self.stdscr.get_wch()
 
-        c = self.stdscr.getch()
-
-        if c == ord('y'):
-            return True
-
+            if c == curses.KEY_LEFT:
+                choice = 0
+            elif c == curses.KEY_RIGHT:
+                choice = 1
+            elif c == '\n':
+                if choice == 0:
+                    return True
+                else:
+                    return False
+                
         return False
     
     
