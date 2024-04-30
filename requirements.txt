@@ -4,10 +4,13 @@ qsimcirq
 qiskit
 qiskit_aer
 qiskit-ibm-runtime
+qiskit_providers
+matplotlib
 ply
 pyyaml
 numpy
-window-curses ; platform_system == 'Windows'
+
+## Force to use pydantic>=2.5.0
 pydantic>=2.5.0
 
-## Sort out dependency problem with pydantic 2.5.0 for qiskit and smaller than 2.0.0 for cirq.
+## If on windows, also import windows-curses
