@@ -11,8 +11,6 @@ from qiskit_ibm_runtime import QiskitRuntimeService
 
 plt.switch_backend('agg')
 
-# TODO: re reun results for correct results
-
 def main():
 
     L_arr = [4,8,16]
@@ -301,7 +299,7 @@ def submit_IBMQ_job():
     config_file = open('config.yaml','r')
     config_dict = yaml.safe_load(config_file)
 
-    token_str = "217c42c6b33fe1b4f02a9ab802a2a39653cec0965dff45bd0555f768ae32f69eeccfd4bee5e4c4900746b1510043e68d36b39db6b5e10b792ad80945a2a6d8eb"
+    token_str = "IBM Quantum api token"
     qm = IBM_Q(token_str, config=config_dict['IBM-Q'])
     
     particle_circuit, initial_state_circuit  = build_circuit(L,energy_lvl,time_step_size,num_iters,'qiskit-QVM')
