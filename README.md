@@ -1,7 +1,9 @@
 # quantum-chem-interface
-Educational Quantum Computing Interface to aid Teaching Quantum Chemistry
 
-A tool-box to play around with simulations on different quantum computing backends. Currently the only circuit implemented is the Particle in a Box Model.
+An educational tool-box to play around with quantum chemistry simulations on different quantum computing backends. Backend options include a cirq implemented QVM, a qiskit implemented QVM and interfacing with IBM Quantum. Currently the only circuit implemented is the Particle in a Box Model.
 
-## Notes on adding more simulations:
-All circuits must use 'meas' as the register name for measurements. 
+### To Do
+- Add circuit optimisations into particle in a box circuit generation
+- Bug fix particle in a box simulation
+- GUI to display results
+- Implement a free particle simulation
